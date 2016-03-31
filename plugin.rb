@@ -15,7 +15,8 @@ class SAMLAuthenticator < ::Auth::OAuth2Authenticator
     omniauth.provider :saml,
                       :name => 'saml',
                       :issuer => 'discourse',
-                      :idp_sso_target_url => GlobalSetting.saml_target_url
+                      :idp_sso_target_url => GlobalSetting.saml_target_url,
+                      :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint)
   end
 
   def after_authenticate(auth)
