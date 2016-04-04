@@ -22,11 +22,9 @@ class SAMLAuthenticator < ::Auth::OAuth2Authenticator
   def after_authenticate(auth)
     result = Auth::Result.new
 
-    raise auth.inspect
     uid = auth[:uid]
-    result.name = auth[:info].name
     result.username = uid
-    result.email = auth[:info].email
+    result.email = uid
     result.email_valid = true
 
     current_info = ::PluginStore.get("saml", "saml_user_#{uid}")
