@@ -34,6 +34,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     if current_info
       result.user = User.where(id: current_info[:user_id]).first
     end
+
+    result.user ||= User.where(email: result.email).first
+
     result.extra_data = { saml_user_id: uid }
     result
   end
