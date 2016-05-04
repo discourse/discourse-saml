@@ -63,6 +63,8 @@ if request_method == 'post'
         settings = OneLogin::RubySaml::Settings.new(:idp_sso_target_url => GlobalSetting.saml_target_url,
                                                     :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint))
 
+        settings.compress_request = false
+
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
 
