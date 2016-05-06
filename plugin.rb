@@ -60,10 +60,19 @@ if request_method == 'post'
       skip_before_filter :check_xhr
       def index
         authn_request = OneLogin::RubySaml::Authrequest.new
-        settings = OneLogin::RubySaml::Settings.new(:idp_sso_target_url => GlobalSetting.saml_target_url,
-                                                    :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint))
 
-        settings.compress_request = false
+        metadata_url = GlobalSetting.try(:saml_metadata_url)
+
+        settings = nil
+
+        if metadata_url
+          idp_metadata_parser = OneLogin::RubySaml::IdpMetadataParser.new
+          settings = idp_metadata_parser.parse_remote(metadata_url)
+          settings.idp_sso_target_url = GlobalSetting.saml_target_url
+        else
+          settings = OneLogin::RubySaml::Settings.new(:idp_sso_target_url => GlobalSetting.saml_target_url,
+                                                      :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint))
+        end
 
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
