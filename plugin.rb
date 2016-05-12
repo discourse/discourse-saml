@@ -78,7 +78,7 @@ if request_method == 'post'
         settings.passive = false
         settings.issuer = Discourse.base_url
         settings.assertion_consumer_service_url = Discourse.base_url + "/auth/saml/callback"
-        settings.name_identifier_format = "urn:oasis:names:tc:SAML:2.0:protocol"
+        settings.name_identifier_format = "urn:oasis:names:tc:SAML:2.0:protocol"
 
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
