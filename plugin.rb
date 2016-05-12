@@ -35,7 +35,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       result.user = User.where(id: current_info[:user_id]).first
     end
 
-    result.user ||= User.where(email: result.email).first
+    result.user ||= User.where(email: Email.downcase(result.email)).first
 
     result.extra_data = { saml_user_id: uid }
     result
