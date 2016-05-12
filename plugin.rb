@@ -74,6 +74,7 @@ if request_method == 'post'
                                                       :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint))
         end
 
+        settings.compress_request = false
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
 
