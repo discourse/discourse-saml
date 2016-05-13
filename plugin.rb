@@ -19,6 +19,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       :issuer => 'discourse',
                       :idp_sso_target_url => GlobalSetting.saml_target_url,
                       :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
+                      :idp_cert => GlobalSetting.try(:saml_cert),
+                      :skip_subject_confirmation => GlobalSetting.try(:saml_skip_confirmation).present?,
                       :custom_url => (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil
   end
 
@@ -69,9 +71,11 @@ if request_method == 'post'
           idp_metadata_parser = OneLogin::RubySaml::IdpMetadataParser.new
           settings = idp_metadata_parser.parse_remote(metadata_url)
           settings.idp_sso_target_url = GlobalSetting.saml_target_url
+          settings.idp_cert ||= GlobalSetting.try(:saml_cert)
         else
           settings = OneLogin::RubySaml::Settings.new(:idp_sso_target_url => GlobalSetting.saml_target_url,
-                                                      :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint))
+                                                      :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
+                                                      :idp_cert => GlobalSetting.try(:saml_cert))
         end
 
         settings.compress_request = false
