@@ -29,6 +29,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     if GlobalSetting.try(:saml_log_auth)
       ::PluginStore.set("saml", "saml_last_auth", auth.inspect)
+      ::PluginStore.set("saml", "saml_last_auth_raw_info", auth.raw_info.inspect)
+      ::PluginStore.set("saml", "saml_last_auth_info", auth.info.inspect)
+      ::PluginStore.set("saml", "saml_last_auth_extra", auth.extra.inspect)
     end
 
     uid = auth[:uid]
