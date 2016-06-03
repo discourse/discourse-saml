@@ -20,7 +20,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       :idp_sso_target_url => GlobalSetting.saml_target_url,
                       :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
                       :idp_cert => GlobalSetting.try(:saml_cert),
-                      :attribute_statements => { :nickname => ['screenName'] }
+                      :attribute_statements => { :nickname => ['screenName'] },
                       :custom_url => (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil
   end
 
