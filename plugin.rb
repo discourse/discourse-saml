@@ -33,7 +33,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     uid = auth[:uid]
     result.name = auth[:info].name || uid
-    result.username = auth[:info].nickname || uid
+    result.username = auth[:raw_info].attributes['screenName'] || uid
     result.email = auth[:info].email || uid
     result.email_valid = true
 
