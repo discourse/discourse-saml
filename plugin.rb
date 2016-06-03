@@ -31,8 +31,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     uid = auth[:uid]
+    result.name = auth[:info].name || uid
     result.username = uid
-    result.email = uid
+    result.email = auth[:info].email || uid
     result.email_valid = true
 
     current_info = ::PluginStore.get("saml", "saml_user_#{uid}")
