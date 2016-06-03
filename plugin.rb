@@ -28,7 +28,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     result = Auth::Result.new
 
     if GlobalSetting.try(:saml_log_auth)
-      Rails.logger.warn auth.inspect
+      Rails.logger.error auth.inspect
     end
 
     uid = auth[:uid]
