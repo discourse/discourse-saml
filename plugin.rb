@@ -128,7 +128,7 @@ HTML_FORM
 end
 
 title = GlobalSetting.try(:saml_title) || "SAML"
-button_title = GlobalSetting.try(:saml_title) || "with SAML"
+button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title) || "with SAML"
 
 auth_provider :title => button_title,
               :authenticator => SamlAuthenticator.new('saml'),
