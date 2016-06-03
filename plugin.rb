@@ -26,6 +26,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def after_authenticate(auth)
     result = Auth::Result.new
 
+    if GlobalSetting.try(:saml_log_auth)
+      Rails.logger.warn auth.inspect
+    end
+
     uid = auth[:uid]
     result.username = uid
     result.email = uid
