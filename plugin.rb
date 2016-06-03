@@ -35,7 +35,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     uid = auth[:uid]
     result.name = auth[:info].name || uid
-    result.username = auth.extra[:raw_info].attributes['screenName'] || uid
+    result.username = uid
+    if auth.extra.present? && auth.extra[:raw_info].present?
+      result.username = auth.extra[:raw_info].attributes['screenName'].first || uid
+    end
     result.email = auth[:info].email || uid
     result.email_valid = true
 
