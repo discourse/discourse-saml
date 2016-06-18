@@ -2,7 +2,14 @@
 
 A Discourse Plugin to enable authentication via SAML
 
-This plugin supports one of two modes for initating the SAML logins.  
+Setting up your idp:
+The entitiy-id should be: http://example.com
+The consumer assertion service url should be: https://example.com/auth/saml/callback
+
+You may need to set your idp to send an extra custom attribute 'screenName', that will become the users id.
+
+For idp-initated SSO, use the following URL:
+https://example.com/auth/saml/callback
 
 ### Configuration
 
@@ -19,6 +26,7 @@ Add the following settings to your `app.yml` file in the Environment Settings se
   -----END CERTIFICATE-----"
 ```
 
+For non docker:
 
 Add the following settings to your `discourse.conf` file:
 
