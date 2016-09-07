@@ -43,6 +43,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     result.email = auth[:info].email || uid
     result.email_valid = true
 
+    if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
+      result.skip_email_validation = true
+    end
+
     current_info = ::PluginStore.get("saml", "saml_user_#{uid}")
     if current_info
       result.user = User.where(id: current_info[:user_id]).first
