@@ -59,6 +59,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     result.user ||= User.where(email: Email.downcase(result.email)).first
 
+    if GlobalSetting.try(:saml_clear_username) && result.user.blank?
+      result.username = ''
+    end
+
     result.extra_data = { saml_user_id: uid }
     result
   end
