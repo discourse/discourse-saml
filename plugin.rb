@@ -63,6 +63,31 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       result.username = ''
     end
 
+    if GlobalSetting.try(:saml_omit_username) && result.user.blank?
+      result.omit_username = true
+    end
+
+    # if groups sync is enabled
+    if GlobalSetting.try(:saml_sync_groups) && GlobalSetting.try(:saml_sync_groups_list) && auth.extra.present? && auth.extra[:raw_info].present? && !result.user.blank?
+
+      total_group_list = GlobalSetting.try(:saml_sync_groups_list).split('|')
+
+      user_group_list = auth.extra[:raw_info].attributes['memberOf']
+
+
+      groups_to_add = Group.where(name: user_group_list)
+
+      groups_to_add.each do |group|
+        group.add result.user
+      end
+
+      groups_to_remove = Group.where(name: total_group_list - user_group_list)
+
+      groups_to_remove.each do |group|
+        group.remove result.user
+      end
+    end
+
     result.extra_data = { saml_user_id: uid }
     result
   end
