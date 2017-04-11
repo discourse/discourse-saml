@@ -79,7 +79,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     sync_groups(user, auth)
   end
 
-  def sync_groups(auth)
+  def sync_groups(user, auth)
 
     return unless GlobalSetting.try(:saml_sync_groups) && GlobalSetting.try(:saml_sync_groups_list) && auth.extra.present? && auth.extra[:raw_info].present?
 
@@ -90,13 +90,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     groups_to_add = Group.where(name: total_group_list & user_group_list)
 
     groups_to_add.each do |group|
-      group.add result.user
+      group.add user
     end
 
     groups_to_remove = Group.where(name: total_group_list - user_group_list)
 
     groups_to_remove.each do |group|
-      group.remove result.user
+      group.remove user
     end
   end
 
