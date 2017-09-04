@@ -17,7 +17,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     omniauth.provider :saml,
                       :name => 'saml',
                       :issuer => Discourse.base_url,
-                      :idp_sso_target_url => GlobalSetting.saml_target_url,
+                      :idp_sso_target_url => GlobalSetting.try(:saml_target_url),
                       :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
                       :idp_cert => GlobalSetting.try(:saml_cert),
                       :attribute_statements => { :nickname => ['screenName'] },
