@@ -141,7 +141,7 @@ if request_method == 'post'
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
 
-        render text: <<-HTML_FORM
+        render inline: <<-HTML_FORM
   <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <body onload="document.forms[0].submit()">
       <noscript>
