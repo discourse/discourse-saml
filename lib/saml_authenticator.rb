@@ -45,7 +45,6 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     result.email = auth[:info].email || uid
-    result.email_valid = true
 
     if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
       result.skip_email_validation = true
@@ -60,6 +59,18 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     if saml_user_info.nil? && result.user
       ::PluginStore.set("saml", "saml_user_#{uid}", {user_id: result.user.id })
+    end
+
+    if GlobalSetting.try(:saml_validate_email_fields).present? && auth.extra[:raw_info].attributes['memberOf'].present?
+      unless (GlobalSetting.try(:saml_validate_email_fields).split("|").map(&:downcase) & auth.extra[:raw_info].attributes['memberOf'].map(&:downcase)).empty?
+        result.email_valid = true
+      else
+        result.email_valid = false
+      end
+    elsif GlobalSetting.respond_to?(:saml_default_emails_valid) && !GlobalSetting.saml_default_emails_valid.nil?
+      result.email_valid = GlobalSetting.saml_default_emails_valid
+    else
+      result.email_valid = true
     end
 
     if GlobalSetting.try(:saml_clear_username) && result.user.blank?
