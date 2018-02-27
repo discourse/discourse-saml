@@ -50,13 +50,6 @@ if request_method == 'post'
         settings.assertion_consumer_service_url = Discourse.base_url + "/auth/saml/callback"
         settings.name_identifier_format = GlobalSetting.try(:saml_name_identifier_format) || "urn:oasis:names:tc:SAML:2.0:protocol"
 
-        settings.attributes_index = 5
-        settings.attribute_consuming_service.configure do
-          service_name "Service"
-          service_index 2
-          add_attribute ({ name: "friendly_name", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic", friendly_name: "Friendly Name" })
-        end
-
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
 
