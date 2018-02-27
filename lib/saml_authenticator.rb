@@ -145,7 +145,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     return if SiteSetting.saml_request_attributes.blank? || user.blank? || attributes.blank?
 
     SiteSetting.saml_request_attributes.split("|").each do |name|
-      user.custom_fields[name] = attributes[name]
+      user.custom_fields["saml_#{name}"] = attributes[name]
     end
     user.save_custom_fields
   end
