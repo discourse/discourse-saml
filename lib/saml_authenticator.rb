@@ -1,13 +1,13 @@
 class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
   def register_middleware(omniauth)
-    attributes = [
+    request_attributes = [
       { name: "email", friendly_name: "Email address", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" },
       { name: "name", friendly_name: "Full name", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" },
       { name: "first_name", friendly_name: "Given name", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" },
       { name: "last_name", friendly_name: "Family name", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" }
     ]
-    attributes += SiteSetting.saml_request_attributes.split("|").map do |name|
+    request_attributes += SiteSetting.saml_request_attributes.split("|").map do |name|
       { name: name, name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic", friendly_name: name }
     end
 
@@ -17,8 +17,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       :idp_sso_target_url => GlobalSetting.try(:saml_target_url),
                       :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
                       :idp_cert => GlobalSetting.try(:saml_cert),
-                      :request_attributes => attributes,
-                      :attribute_statements => { :nickname => ['screenName'], :department_name => ['department'] },
+                      :request_attributes => request_attributes,
+                      :attribute_statements => { :nickname => ['screenName'] },
                       :assertion_consumer_service_url => Discourse.base_url + "/auth/saml/callback",
                       :custom_url => (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
                       :certificate => GlobalSetting.try(:saml_sp_certificate),
