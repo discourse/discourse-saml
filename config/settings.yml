@@ -1,0 +1,4 @@
+plugins:
+  saml_request_attributes:
+    default: ''
+    type: list

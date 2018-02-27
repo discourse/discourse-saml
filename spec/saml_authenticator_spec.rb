@@ -73,5 +73,26 @@ describe SamlAuthenticator do
       expect(result.user.email).to eq(@user.email)
       expect(result.email_valid).to eq(true)
     end
+
+    it 'stores additional request attributes to user custom fields' do
+      SiteSetting.saml_request_attributes = "department|title"
+
+      hash = OmniAuth::AuthHash.new(
+        uid: @uid,
+        info: {
+            name: "John Doe",
+            email: @user.email
+        },
+        extra: {
+          raw_info: OneLogin::RubySaml::Attributes.new({
+            'department' => "HR",
+            'title' => "Senior HR Manager"
+          })
+        }
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      expect(result.user.custom_fields).to eq(hash.extra.raw_info.attributes)
+    end
   end
 end
