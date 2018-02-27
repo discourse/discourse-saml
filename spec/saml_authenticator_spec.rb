@@ -92,7 +92,9 @@ describe SamlAuthenticator do
       )
 
       result = @authenticator.after_authenticate(hash)
-      expect(result.user.custom_fields).to eq(hash.extra.raw_info.attributes)
+      SiteSetting.saml_request_attributes.split("|").each do |name|
+        expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.attributes[name])
+      end
     end
   end
 end
