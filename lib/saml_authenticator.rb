@@ -38,7 +38,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def attr(key)
-    info[key] || attributes[key].try(:first) || ""
+    info[key] || attributes[key]&.join(",") || ""
   end
 
   def after_authenticate(auth)
@@ -157,10 +157,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_custom_fields
-    return if SiteSetting.saml_request_attributes.blank? || user.blank? || attributes.blank?
+    return if SiteSetting.saml_request_attributes.blank? || user.blank?
 
     SiteSetting.saml_request_attributes.split("|").each do |name|
-      user.custom_fields["saml_#{name}"] = attributes[name]
+      user.custom_fields["saml_#{name}"] = attr(name) if attr(name).present?
     end
     user.save_custom_fields
   end

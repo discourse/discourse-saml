@@ -82,13 +82,13 @@ describe SamlAuthenticator do
       SiteSetting.saml_request_attributes = "department|title"
 
       hash = auth_hash(
-        'department' => "HR",
-        'title' => "Senior HR Manager"
+        'department' => ["HR", "Manager"],
+        'title' => ["Senior HR Manager"]
       )
 
       result = @authenticator.after_authenticate(hash)
       SiteSetting.saml_request_attributes.split("|").each do |name|
-        expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.attributes[name])
+        expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.attributes[name].join(","))
       end
     end
 
