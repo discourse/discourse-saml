@@ -103,8 +103,8 @@ describe SamlAuthenticator do
         @groups[3].add @user
         @hash = auth_hash(
           'memberOf' => group_names.slice(0, 2),
-          'groups_to_add' => group_names.slice(2, 1),
-          'groups_to_remove' => group_names.slice(3, 1),
+          'groups_to_add' => [group_names.slice(2, 1).join(",")],
+          'groups_to_remove' => [group_names.slice(3, 1).join(",")],
         )
       end
 

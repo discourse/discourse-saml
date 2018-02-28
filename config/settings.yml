@@ -1,4 +1,7 @@
 plugins:
   saml_request_attributes:
-    default: ''
+    default: 'email|name|first_name|last_name'
+    type: list
+  saml_attribute_statements:
+    default: 'name:name|email:email,mail|first_name:first_name,firstname,firstName|last_name:last_name,lastname,lastName|nickname:screenName'
     type: list

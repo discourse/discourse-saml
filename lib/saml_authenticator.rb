@@ -1,21 +1,22 @@
 class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
-  attr_reader :user, :attributes
+  attr_reader :user, :attributes, :info
 
   def attribute_name_format(type = "basic")
     "urn:oasis:names:tc:SAML:2.0:attrname-format:#{type}"
   end
 
   def register_middleware(omniauth)
-    request_attributes = [
-      { name: "email", friendly_name: "Email address", name_format: attribute_name_format },
-      { name: "name", friendly_name: "Full name", name_format: attribute_name_format },
-      { name: "first_name", friendly_name: "Given name", name_format: attribute_name_format },
-      { name: "last_name", friendly_name: "Family name", name_format: attribute_name_format }
-    ]
-    request_attributes += SiteSetting.saml_request_attributes.split("|").map do |name|
+    request_attributes = SiteSetting.saml_request_attributes.split("|").map do |name|
       { name: name, name_format: attribute_name_format, friendly_name: name }
     end
+
+    attribute_statements = SiteSetting.saml_attribute_statements.split("|").map do |statement|
+      attrs = statement.split(":")
+      return nil if attrs.count != 2
+      { attrs[0] => attrs[1].split(",") }
+    end
+    attribute_statements = attribute_statements.compact.reduce Hash.new, :merge
 
     omniauth.provider :saml,
                       :name => 'saml',
@@ -24,7 +25,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
                       :idp_cert => GlobalSetting.try(:saml_cert),
                       :request_attributes => request_attributes,
-                      :attribute_statements => { :nickname => ['screenName'] },
+                      :attribute_statements => attribute_statements,
                       :assertion_consumer_service_url => Discourse.base_url + "/auth/saml/callback",
                       :custom_url => (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
                       :certificate => GlobalSetting.try(:saml_sp_certificate),
@@ -36,12 +37,17 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       }
   end
 
+  def attr(key)
+    info[key] || attributes[key].try(:first) || ""
+  end
+
   def after_authenticate(auth)
     result = Auth::Result.new
 
     extra_data = auth.extra || {}
     raw_info = extra_data[:raw_info]
     @attributes = raw_info&.attributes || {}
+    @info = auth[:info]
 
     if GlobalSetting.try(:saml_log_auth)
       ::PluginStore.set("saml", "saml_last_auth", auth.inspect)
@@ -128,8 +134,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|')
     user_group_list = attributes['memberOf'] || []
-    groups_to_add = user_group_list + (attributes['groups_to_add'] || [])
-    groups_to_remove = attributes['groups_to_remove'] || []
+    groups_to_add = user_group_list + attr('groups_to_add').split(",")
+    groups_to_remove = attr('groups_to_remove').split(",")
 
     return if user_group_list.blank? && groups_to_add.blank? && groups_to_remove.blank?
 
