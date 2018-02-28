@@ -1,14 +1,20 @@
 class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
+  attr_reader :user, :attributes
+
+  def attribute_name_format(type = "basic")
+    "urn:oasis:names:tc:SAML:2.0:attrname-format:#{type}"
+  end
+
   def register_middleware(omniauth)
     request_attributes = [
-      { name: "email", friendly_name: "Email address", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" },
-      { name: "name", friendly_name: "Full name", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" },
-      { name: "first_name", friendly_name: "Given name", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" },
-      { name: "last_name", friendly_name: "Family name", name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic" }
+      { name: "email", friendly_name: "Email address", name_format: attribute_name_format },
+      { name: "name", friendly_name: "Full name", name_format: attribute_name_format },
+      { name: "first_name", friendly_name: "Given name", name_format: attribute_name_format },
+      { name: "last_name", friendly_name: "Family name", name_format: attribute_name_format }
     ]
     request_attributes += SiteSetting.saml_request_attributes.split("|").map do |name|
-      { name: name, name_format: "urn:oasis:names:tc:SAML:2.0:attrname-format:basic", friendly_name: name }
+      { name: name, name_format: attribute_name_format, friendly_name: name }
     end
 
     omniauth.provider :saml,
@@ -35,7 +41,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     extra_data = auth.extra || {}
     raw_info = extra_data[:raw_info]
-    attributes = raw_info&.attributes || {}
+    @attributes = raw_info&.attributes || {}
 
     if GlobalSetting.try(:saml_log_auth)
       ::PluginStore.set("saml", "saml_last_auth", auth.inspect)
@@ -93,18 +99,12 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     result.extra_data = { saml_user_id: uid, saml_attributes: attributes }
 
-    if GlobalSetting.try(:saml_sync_groups)
-      groups = attributes['memberOf']
-
-      if result.user.blank?
-        result.extra_data[:saml_groups] = groups
-      else
-        sync_groups(result.user, groups)
-      end
+    if result.user.present?
+      @user = result.user
+      sync_groups
+      sync_custom_fields
+      sync_email(result.email)
     end
-
-    sync_custom_fields(result.user, attributes)
-    sync_email(result.user, Email.downcase(result.email)) if GlobalSetting.try(:saml_sync_email) && result.user.present? && result.user.email != Email.downcase(result.email)
 
     result
   end
@@ -114,34 +114,43 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_create_account(user, auth)
-    ::PluginStore.set("saml", "saml_user_#{auth[:extra_data][:saml_user_id]}", {user_id: user.id })
+    ::PluginStore.set("saml", "saml_user_#{auth[:extra_data][:saml_user_id]}", user_id: user.id)
 
-    sync_groups(user, auth[:extra_data][:saml_groups])
-    sync_custom_fields(user, auth[:extra_data][:saml_attributes])
+    @user = user
+    @attributes = auth[:extra_data][:saml_attributes]
+
+    sync_groups
+    sync_custom_fields
   end
 
-  def sync_groups(user, saml_groups)
+  def sync_groups
+    return unless GlobalSetting.try(:saml_sync_groups)
 
-    return unless GlobalSetting.try(:saml_sync_groups) && GlobalSetting.try(:saml_sync_groups_list) && saml_groups.present?
+    total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|')
+    user_group_list = attributes['memberOf'] || []
+    groups_to_add = user_group_list + (attributes['groups_to_add'] || [])
+    groups_to_remove = attributes['groups_to_remove'] || []
 
-    total_group_list = GlobalSetting.try(:saml_sync_groups_list).split('|')
+    return if user_group_list.blank? && groups_to_add.blank? && groups_to_remove.blank?
 
-    user_group_list = saml_groups
+    if total_group_list.present?
+      groups_to_add = total_group_list & groups_to_add
 
-    groups_to_add = Group.where(name: total_group_list & user_group_list)
+      removable_groups = groups_to_remove.dup
+      groups_to_remove = total_group_list - groups_to_add
+      groups_to_remove &= removable_groups if removable_groups.present?
+    end
 
-    groups_to_add.each do |group|
+    Group.where(name: groups_to_add).each do |group|
       group.add user
     end
 
-    groups_to_remove = Group.where(name: total_group_list - user_group_list)
-
-    groups_to_remove.each do |group|
+    Group.where(name: groups_to_remove).each do |group|
       group.remove user
     end
   end
 
-  def sync_custom_fields(user, attributes)
+  def sync_custom_fields
     return if SiteSetting.saml_request_attributes.blank? || user.blank? || attributes.blank?
 
     SiteSetting.saml_request_attributes.split("|").each do |name|
@@ -150,8 +159,12 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     user.save_custom_fields
   end
 
-  def sync_email(user, email)
+  def sync_email(email)
     return unless GlobalSetting.try(:saml_sync_email)
+
+    email = Email.downcase(email)
+
+    return if user.email == email
 
     existing_user = User.find_by_email(email)
     if email =~ EmailValidator.email_regex && existing_user.nil?
