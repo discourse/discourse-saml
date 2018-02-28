@@ -19,7 +19,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     attribute_statements = attribute_statements.compact.reduce Hash.new, :merge
 
     omniauth.provider :saml,
-                      :name => 'saml',
+                      :name => name,
                       :issuer => Discourse.base_url,
                       :idp_sso_target_url => GlobalSetting.try(:saml_target_url),
                       :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
