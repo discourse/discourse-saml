@@ -19,18 +19,18 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     attribute_statements = attribute_statements.compact.reduce Hash.new, :merge
 
     omniauth.provider :saml,
-                      :name => name,
-                      :issuer => Discourse.base_url,
-                      :idp_sso_target_url => GlobalSetting.try(:saml_target_url),
-                      :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
-                      :idp_cert => GlobalSetting.try(:saml_cert),
-                      :request_attributes => request_attributes,
-                      :attribute_statements => attribute_statements,
-                      :assertion_consumer_service_url => Discourse.base_url + "/auth/saml/callback",
-                      :custom_url => (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
-                      :certificate => GlobalSetting.try(:saml_sp_certificate),
-                      :private_key => GlobalSetting.try(:saml_sp_private_key),
-                      :security => {
+                      name: name,
+                      issuer: Discourse.base_url,
+                      idp_sso_target_url: GlobalSetting.try(:saml_target_url),
+                      idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
+                      idp_cert: GlobalSetting.try(:saml_cert),
+                      request_attributes: request_attributes,
+                      attribute_statements: attribute_statements,
+                      assertion_consumer_service_url: Discourse.base_url + "/auth/#{name}/callback",
+                      custom_url: (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
+                      certificate: GlobalSetting.try(:saml_sp_certificate),
+                      private_key: GlobalSetting.try(:saml_sp_private_key),
+                      security: {
                         authn_requests_signed: GlobalSetting.try(:saml_authn_requests_signed) ? true : false,
                         want_assertions_signed: GlobalSetting.try(:saml_want_assertions_signed) ? true : false,
                         signature_method: XMLSecurity::Document::RSA_SHA1
@@ -50,14 +50,14 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     @info = auth[:info]
 
     if GlobalSetting.try(:saml_log_auth)
-      ::PluginStore.set("saml", "saml_last_auth", auth.inspect)
-      ::PluginStore.set("saml", "saml_last_auth_raw_info", raw_info.inspect)
-      ::PluginStore.set("saml", "saml_last_auth_extra", extra_data.inspect)
+      ::PluginStore.set("saml", "#{name}_last_auth", auth.inspect)
+      ::PluginStore.set("saml", "#{name}_last_auth_raw_info", raw_info.inspect)
+      ::PluginStore.set("saml", "#{name}_last_auth_extra", extra_data.inspect)
     end
 
     if GlobalSetting.try(:saml_debug_auth)
-      log("saml_auth_info: #{auth[:info].inspect}")
-      log("saml_auth_extra: #{extra_data.inspect}")
+      log("#{name}_auth_info: #{auth[:info].inspect}")
+      log("#{name}_auth_extra: #{extra_data.inspect}")
     end
 
     uid = auth[:uid]
@@ -72,7 +72,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       result.skip_email_validation = true
     end
 
-    saml_user_info = ::PluginStore.get("saml", "saml_user_#{uid}")
+    saml_user_info = ::PluginStore.get("saml", "#{name}_user_#{uid}")
     if saml_user_info
       result.user = User.where(id: saml_user_info[:user_id]).first
     end
@@ -80,7 +80,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     result.user ||= User.find_by_email(result.email)
 
     if saml_user_info.nil? && result.user
-      ::PluginStore.set("saml", "saml_user_#{uid}", {user_id: result.user.id })
+      ::PluginStore.set("saml", "#{name}_user_#{uid}", user_id: result.user.id)
     end
 
     if GlobalSetting.try(:saml_validate_email_fields).present? && attributes['memberOf'].present?
@@ -120,7 +120,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_create_account(user, auth)
-    ::PluginStore.set("saml", "saml_user_#{auth[:extra_data][:saml_user_id]}", user_id: user.id)
+    ::PluginStore.set("saml", "#{name}_user_#{auth[:extra_data][:saml_user_id]}", user_id: user.id)
 
     @user = user
     @attributes = auth[:extra_data][:saml_attributes]
@@ -159,8 +159,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def sync_custom_fields
     return if SiteSetting.saml_request_attributes.blank? || user.blank?
 
-    SiteSetting.saml_request_attributes.split("|").each do |name|
-      user.custom_fields["saml_#{name}"] = attr(name) if attr(name).present?
+    SiteSetting.saml_request_attributes.split("|").each do |key|
+      user.custom_fields["#{name}_#{key}"] = attr(key) if attr(key).present?
     end
     user.save_custom_fields
   end
