@@ -12,6 +12,12 @@ gem "omniauth-saml", '1.9.0'
 
 require_relative("lib/saml_authenticator")
 
+after_initialize do
+  [
+    '../app/jobs/onceoff/migrate_saml_user_infos.rb'
+  ].each { |path| load File.expand_path(path, __FILE__) }
+end
+
 request_method = GlobalSetting.try(:saml_request_method) || 'get'
 
 if request_method == 'post'
@@ -91,11 +97,11 @@ end
 title = GlobalSetting.try(:saml_title) || "SAML"
 button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title) || "with SAML"
 
-auth_provider :title => button_title,
-              :authenticator => SamlAuthenticator.new('saml'),
-              :message => "Authorizing with #{title} (make sure pop up blockers are not enabled)",
-              :frame_width => 600,
-              :frame_height => 380,
-              :background_color => '#003366',
-              :full_screen_login => GlobalSetting.try(:saml_full_screen_login) || false,
-              :custom_url => request_method == 'post' ? "/discourse_saml" : nil
+auth_provider title: button_title,
+              authenticator: SamlAuthenticator.new('saml'),
+              message: "Authorizing with #{title} (make sure pop up blockers are not enabled)",
+              frame_width: 600,
+              frame_height: 380,
+              background_color: '#003366',
+              full_screen_login: GlobalSetting.try(:saml_full_screen_login) || false,
+              custom_url: request_method == 'post' ? "/discourse_saml" : nil

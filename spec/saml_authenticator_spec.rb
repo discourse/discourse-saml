@@ -1,6 +1,11 @@
 require 'rails_helper'
 
 describe SamlAuthenticator do
+  Fabricator(:oauth2_user_info) do
+    provider "saml"
+    user
+  end
+
   context 'after_authenticate' do
     before do
       @authenticator = SamlAuthenticator.new('saml')
@@ -35,7 +40,7 @@ describe SamlAuthenticator do
     end
 
     it 'finds user by uid' do
-      PluginStore.set("saml", "saml_user_#{@uid}", {user_id: @user.id })
+      Fabricate(:oauth2_user_info, uid: @uid, user: @user)
 
       hash = OmniAuth::AuthHash.new(
         uid: @uid,

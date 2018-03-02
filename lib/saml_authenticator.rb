@@ -1,6 +1,10 @@
 class SamlAuthenticator < ::Auth::OAuth2Authenticator
-
   attr_reader :user, :attributes, :info
+
+  def initialize(name, opts = {})
+    opts[:trusted] ||= true
+    super(name, opts)
+  end
 
   def attribute_name_format(type = "basic")
     "urn:oasis:names:tc:SAML:2.0:attrname-format:#{type}"
@@ -42,7 +46,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_authenticate(auth)
-    result = Auth::Result.new
+    auth[:provider] = name
+    result = super
 
     extra_data = auth.extra || {}
     raw_info = extra_data[:raw_info]
@@ -61,26 +66,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     uid = auth[:uid]
-    result.name = auth[:info].name || uid
+    result.name ||= uid
     result.username = uid
     result.username = attributes['screenName'].try(:first) || uid if attributes.present?
     result.username = attributes['uid'].try(:first) || uid if GlobalSetting.try(:saml_use_uid) && attributes.present?
 
-    result.email = auth[:info].email || uid
-
     if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
       result.skip_email_validation = true
-    end
-
-    saml_user_info = ::PluginStore.get("saml", "#{name}_user_#{uid}")
-    if saml_user_info
-      result.user = User.where(id: saml_user_info[:user_id]).first
-    end
-
-    result.user ||= User.find_by_email(result.email)
-
-    if saml_user_info.nil? && result.user
-      ::PluginStore.set("saml", "#{name}_user_#{uid}", user_id: result.user.id)
     end
 
     if GlobalSetting.try(:saml_validate_email_fields).present? && attributes['memberOf'].present?
@@ -103,7 +95,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       result.omit_username = true
     end
 
-    result.extra_data = { saml_user_id: uid, saml_attributes: attributes }
+    result.extra_data[:saml_attributes] = attributes
 
     if result.user.present?
       @user = result.user
@@ -120,7 +112,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_create_account(user, auth)
-    ::PluginStore.set("saml", "#{name}_user_#{auth[:extra_data][:saml_user_id]}", user_id: user.id)
+    super
 
     @user = user
     @attributes = auth[:extra_data][:saml_attributes]
