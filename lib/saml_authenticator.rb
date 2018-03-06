@@ -10,18 +10,35 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     "urn:oasis:names:tc:SAML:2.0:attrname-format:#{type}"
   end
 
-  def register_middleware(omniauth)
-    request_attributes = SiteSetting.saml_request_attributes.split("|").map do |name|
+  def request_attributes
+    attrs = "email|name|first_name|last_name"
+    custom_attrs = GlobalSetting.try(:saml_request_attributes)
+
+    attrs = "#{attrs}|#{custom_attrs}" if custom_attrs.present?
+
+    attrs.split("|").uniq.map do |name|
       { name: name, name_format: attribute_name_format, friendly_name: name }
     end
+  end
 
-    attribute_statements = SiteSetting.saml_attribute_statements.split("|").map do |statement|
+  def attribute_statements
+    result = {}
+    statements = "name:name|email:email,mail|first_name:first_name,firstname,firstName|last_name:last_name,lastname,lastName|nickname:screenName"
+    custom_statements = GlobalSetting.try(:saml_attribute_statements)
+
+    statements = "#{statements}|#{custom_statements}" if custom_statements.present?
+
+    statements.split("|").map do |statement|
       attrs = statement.split(":")
-      return nil if attrs.count != 2
-      { attrs[0] => attrs[1].split(",") }
+      next if attrs.count != 2
+      (result[attrs[0]] ||= []) << attrs[1].split(",")
+      result[attrs[0]].flatten!
     end
-    attribute_statements = attribute_statements.compact.reduce Hash.new, :merge
 
+    result
+  end
+
+  def register_middleware(omniauth)
     omniauth.provider :saml,
                       name: name,
                       issuer: Discourse.base_url,

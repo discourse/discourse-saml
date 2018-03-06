@@ -126,5 +126,25 @@ describe SamlAuthenticator do
       end
 
     end
+
+    describe "global setting" do
+      it "matches request_attributes count" do
+        expect(@authenticator.request_attributes.count).to eq(4)
+
+        GlobalSetting.stubs(:saml_request_attributes).returns("company_name|mobile_number|name")
+        expect(@authenticator.request_attributes.count).to eq(6)
+      end
+
+      it "matches attribute_statements count" do
+        expect(@authenticator.attribute_statements.count).to eq(5)
+
+        GlobalSetting.stubs(:saml_attribute_statements).returns("email:emailAddress|company|name")
+        expect(@authenticator.attribute_statements.count).to eq(5)
+        expect(@authenticator.attribute_statements["email"]).to eq(["email", "mail", "emailAddress"])
+
+        GlobalSetting.stubs(:saml_attribute_statements).returns("company_name:company,business|phone:mobile,contact_no")
+        expect(@authenticator.attribute_statements.count).to eq(7)
+      end
+    end
   end
 end
