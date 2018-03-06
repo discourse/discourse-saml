@@ -1,4 +1,0 @@
-en:
-  site_settings:
-    saml_request_attributes: "Request the IdP to send additional attributes in SAML response. The values will be stored in the user custom fields."
-    saml_attribute_statements: "Map your custom attribute names to the appropriate fields."

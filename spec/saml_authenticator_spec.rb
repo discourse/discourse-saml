@@ -84,7 +84,7 @@ describe SamlAuthenticator do
     end
 
     it 'stores additional request attributes to user custom fields' do
-      SiteSetting.saml_request_attributes = "department|title"
+      GlobalSetting.stubs(:saml_request_attributes).returns("department|title")
 
       hash = auth_hash(
         'department' => ["HR", "Manager"],
@@ -92,7 +92,7 @@ describe SamlAuthenticator do
       )
 
       result = @authenticator.after_authenticate(hash)
-      SiteSetting.saml_request_attributes.split("|").each do |name|
+      GlobalSetting.saml_request_attributes.split("|").each do |name|
         expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.attributes[name].join(","))
       end
     end

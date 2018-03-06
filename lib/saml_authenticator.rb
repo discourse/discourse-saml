@@ -167,9 +167,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_custom_fields
-    return if SiteSetting.saml_request_attributes.blank? || user.blank?
+    return if user.blank?
 
-    SiteSetting.saml_request_attributes.split("|").each do |key|
+    request_attributes.each do |attr|
+      key = attr[:name]
       user.custom_fields["#{name}_#{key}"] = attr(key) if attr(key).present?
     end
     user.save_custom_fields
