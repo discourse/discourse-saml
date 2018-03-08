@@ -48,7 +48,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       request_attributes: request_attributes,
                       attribute_statements: attribute_statements,
                       assertion_consumer_service_url: Discourse.base_url + "/auth/#{name}/callback",
-                      name_identifier_format: GlobalSetting.try(:saml_name_identifier_format) || "urn:oasis:names:tc:SAML:2.0:protocol",
+                      name_identifier_format: GlobalSetting.try(:saml_name_identifier_format),
                       custom_url: (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
                       certificate: GlobalSetting.try(:saml_sp_certificate),
                       private_key: GlobalSetting.try(:saml_sp_private_key),
