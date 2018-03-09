@@ -134,6 +134,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     super
 
     @user = user
+    @info = {}
     @attributes = auth[:extra_data][:saml_attributes]
 
     sync_groups
