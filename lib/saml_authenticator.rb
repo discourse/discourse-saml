@@ -134,6 +134,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     super
 
     @user = user
+    # TODO: Have to improve the behaviour and add spec test
     @info = {}
     @attributes = auth[:extra_data][:saml_attributes]
 
