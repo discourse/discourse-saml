@@ -85,7 +85,21 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     uid = auth[:uid]
     result.name ||= uid
-    result.email ||= uid
+    if !result.email
+      result.email = uid
+      if !result.user
+        result.user = User.find_by_email(result.email)
+        if result.user
+          Oauth2UserInfo.create(
+            uid: uid,
+            provider: auth[:provider],
+            email: result.email,
+            user: result.user
+          )
+        end
+      end
+    end
+
     result.username = uid
     result.username = attributes['screenName'].try(:first) || uid if attributes.present?
     result.username = attributes['uid'].try(:first) || uid if GlobalSetting.try(:saml_use_uid) && attributes.present?
