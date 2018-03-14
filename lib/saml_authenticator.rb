@@ -64,7 +64,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_authenticate(auth)
+    uid = auth[:uid]
     auth[:provider] = name
+    auth[:info][:name] ||= uid
+    auth[:info][:email] ||= uid
+
     result = super
 
     extra_data = auth.extra || {}
@@ -81,23 +85,6 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     if GlobalSetting.try(:saml_debug_auth)
       log("#{name}_auth_info: #{auth[:info].inspect}")
       log("#{name}_auth_extra: #{extra_data.inspect}")
-    end
-
-    uid = auth[:uid]
-    result.name ||= uid
-    if !result.email
-      result.email = uid
-      if !result.user
-        result.user = User.find_by_email(result.email)
-        if result.user
-          Oauth2UserInfo.create(
-            uid: uid,
-            provider: auth[:provider],
-            email: result.email,
-            user: result.user
-          )
-        end
-      end
     end
 
     result.username = uid

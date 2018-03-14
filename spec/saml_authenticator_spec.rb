@@ -55,6 +55,18 @@ describe SamlAuthenticator do
       expect(result.email_valid).to eq(true)
     end
 
+    it 'finds user by email in uid' do
+      Fabricate(:oauth2_user_info, uid: @uid, user: @user)
+
+      hash = OmniAuth::AuthHash.new(
+        uid: @user.email,
+        info: {}
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      expect(result.user).to eq(@user)
+    end
+
     it 'defaults email_valid to false if saml_default_emails_valid is false' do
       GlobalSetting.stubs(:saml_default_emails_valid).returns(false)
 
