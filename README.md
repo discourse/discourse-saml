@@ -1,21 +1,24 @@
+> ⚠ Discourse has successfully integrated with SAML for many enterprises, but SAML integration is often complex, error prone, and typically requires customization / changes for that organization's _specific implementation_ of SAML. This work is best undertaken by software developers familiar with Discourse. We are highly familiar with Discourse, and available to do that work [on an enterprise hosting plan](https://discourse.org/buy).
+
 ### discourse-saml
 
 A Discourse Plugin to enable authentication via SAML
 
 Setting up your idp:
-The entity-id should be: http://example.com
-The consumer assertion service url should be: https://example.com/auth/saml/callback
+The entity-id should be: `http://example.com`
+The consumer assertion service url should be: `https://example.com/auth/saml/callback`
 
 You may need to set your idp to send an extra custom attribute 'screenName', that will become the users id.
 
 For idp-initated SSO, use the following URL:
-https://example.com/auth/saml/callback
+`https://example.com/auth/saml/callback`
 
 ### Configuration
 
 For Docker based installations:
 
 Add the following settings to your `app.yml` file in the Environment Settings section:
+
 ```
 ## Saml plugin setting
   DISCOURSE_SAML_TARGET_URL: https://idpvendor.com/saml/login/
