@@ -10,6 +10,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     "urn:oasis:names:tc:SAML:2.0:attrname-format:#{type}"
   end
 
+  def setting(key)
+    GlobalSetting.try("#{name}_#{key}") || GlobalSetting.try("saml_#{key.to_s}")
+  end
+
   def request_attributes
     attrs = "email|name|first_name|last_name"
     custom_attrs = GlobalSetting.try(:saml_request_attributes)
@@ -42,9 +46,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     omniauth.provider :saml,
                       name: name,
                       issuer: Discourse.base_url,
-                      idp_sso_target_url: GlobalSetting.try(:saml_target_url),
+                      idp_sso_target_url: setting(:target_url),
                       idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
-                      idp_cert: GlobalSetting.try(:saml_cert),
+                      idp_cert: setting(:cert),
                       request_attributes: request_attributes,
                       attribute_statements: attribute_statements,
                       assertion_consumer_service_url: Discourse.base_url + "/auth/#{name}/callback",
