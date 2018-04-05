@@ -158,5 +158,29 @@ describe SamlAuthenticator do
         expect(@authenticator.attribute_statements.count).to eq(7)
       end
     end
+
+    context 'after_create_account' do
+      it 'adds to group' do
+        GlobalSetting.stubs(:saml_sync_groups).returns(true)
+        authenticator = SamlAuthenticator.new("saml", trusted: true)
+        user = Fabricate(:user, email: 'realgoogleuser@gmail.com')
+        group = Fabricate(:group)
+        session = {
+          extra_data: {
+            uid: "123456",
+            provider: "saml",
+            saml_info: {
+              groups_to_add: group.name
+            },
+            saml_attributes: {
+              name: "John Doe",
+              email: user.email
+            }
+          }
+        }
+        authenticator.after_create_account(user, session)
+        expect(user.groups.find(group.id).present?).to eq(true)
+      end
+    end
   end
 end

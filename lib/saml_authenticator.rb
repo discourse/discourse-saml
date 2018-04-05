@@ -1,6 +1,10 @@
 class SamlAuthenticator < ::Auth::OAuth2Authenticator
   attr_reader :user, :attributes, :info
 
+  def info=(info)
+    @info = info.present? ? info.with_indifferent_access : info
+  end
+
   def initialize(name, opts = {})
     opts[:trusted] ||= true
     super(name, opts)
@@ -69,6 +73,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
   def after_authenticate(auth)
     uid = auth[:uid]
+    self.info = auth[:info]
+
     auth[:provider] = name
     auth[:info][:name] ||= uid
     auth[:info][:email] ||= uid
@@ -78,7 +84,6 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     extra_data = auth.extra || {}
     raw_info = extra_data[:raw_info]
     @attributes = raw_info&.attributes || {}
-    @info = auth[:info]
 
     if GlobalSetting.try(:saml_log_auth)
       ::PluginStore.set("saml", "#{name}_last_auth", auth.inspect)
@@ -87,12 +92,12 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     if GlobalSetting.try(:saml_debug_auth)
-      log("#{name}_auth_info: #{auth[:info].inspect}")
+      log("#{name}_auth_info: #{info.inspect}")
       log("#{name}_auth_extra: #{extra_data.inspect}")
     end
 
     result.username = uid
-    result.username = attributes['screenName'].try(:first) || uid if attributes.present?
+    result.username = attributes['screenName'].try(:first) || uid 
     result.username = attributes['uid'].try(:first) || uid if GlobalSetting.try(:saml_use_uid) && attributes.present?
 
     if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
@@ -120,6 +125,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     result.extra_data[:saml_attributes] = attributes
+    result.extra_data[:saml_info] = info
 
     if result.user.present?
       @user = result.user
@@ -139,8 +145,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     super
 
     @user = user
-    # TODO: Have to improve the behaviour and add spec test
-    @info = {}
+    self.info = auth[:extra_data][:saml_info]
     @attributes = auth[:extra_data][:saml_attributes]
 
     sync_groups
