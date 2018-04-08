@@ -47,6 +47,12 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_NAME_IDENTIFIER_FORMAT`: defaults to "urn:oasis:names:tc:SAML:2.0:protocol"
 - `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`: defaults to true
 - `DISCOURSE_SAML_VALIDATE_EMAIL_FIELDS`: defaults to blank. This setting accepts pipe separated group names that are supplied in `memberOf` attribute in SAML payload. If the group name specified in the value matches that from `memberOf` attribute than the `email_valid` is set to `true`, otherwise it defaults to `false`. This setting overrides `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`.
+- `DISCOURSE_SAML_BUTTON_TITLE`: 'with SAML'
+- `DISCOURSE_SAML_TITLE`: 'SAML'
+- `DISCOURSE_SAML_MESSAGE`: "Authorizing with #{title} (make sure pop up blockers are not enabled)"
+- `DISCOURSE_SAML_FRAME_WIDTH`: '600'
+- `DISCOURSE_SAML_FRAME_HEIGHT`: '400'
+- `DISCOURSE_SAML_FULL_SCREEN_LOGIN`: false
 
 ### Converting an RSA Key to a PEM
 
