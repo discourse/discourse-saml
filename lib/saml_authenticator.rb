@@ -97,9 +97,12 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       log("#{name}_auth_extra: #{extra_data.inspect}")
     end
 
-    result.username = uid
-    result.username = attributes['screenName'].try(:first) || uid if attributes.present?
-    result.username = attributes['uid'].try(:first) || uid if GlobalSetting.try(:saml_use_uid) && attributes.present?
+    if attributes.present?
+      result.username = attributes['screenName'].try(:first)
+      result.username = attributes['uid'].try(:first) if GlobalSetting.try(:saml_use_uid)
+    end
+    result.username = UserNameSuggester.suggest(result.name || result.email)
+    result.username ||= uid
 
     if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
       result.skip_email_validation = true
@@ -117,18 +120,14 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       result.email_valid = true
     end
 
-    if GlobalSetting.try(:saml_clear_username) && result.user.blank?
-      result.username = ''
-    end
-
-    if GlobalSetting.try(:saml_omit_username) && result.user.blank?
-      result.omit_username = true
-    end
-
     result.extra_data[:saml_attributes] = attributes
     result.extra_data[:saml_info] = info
 
-    if result.user.present?
+    if result.user.blank?
+      result.username = '' if GlobalSetting.try(:saml_clear_username)
+      result.omit_username = true if GlobalSetting.try(:saml_omit_username)
+      result.user = auto_create_account(result) if GlobalSetting.try(:saml_auto_create_account) && result.email_valid
+    else
       @user = result.user
       sync_groups
       sync_custom_fields
@@ -151,6 +150,28 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     sync_groups
     sync_custom_fields
+  end
+
+  def auto_create_account(result)
+    email = result.email
+    return if User.find_by_email(email).present?
+
+    # Use a mutex here to counter SAML responses that are sent at the same time and the same email payload
+    DistributedMutex.synchronize("discourse_saml_#{email}") do
+      try_name = result.name.presence
+      try_username = result.username.presence
+
+      user_params = {
+        primary_email: UserEmail.new(email: email, primary: true),
+        name: try_name || User.suggest_name(try_username || email),
+        username: UserNameSuggester.suggest(try_username || try_name || email)
+      }
+
+      user = User.create!(user_params)
+      after_create_account(user, result.as_json.with_indifferent_access)
+
+      user
+    end
   end
 
   def sync_groups

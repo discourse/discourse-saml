@@ -109,6 +109,26 @@ describe SamlAuthenticator do
       end
     end
 
+    it 'creates new account automatically' do
+      GlobalSetting.stubs(:saml_auto_create_account).returns(true)
+      name = "John Doe"
+      email = "johndoe@example.com"
+
+      hash = OmniAuth::AuthHash.new(
+        uid: @uid,
+        info: {
+            name: name,
+            email: email
+        }
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      expect(result.user.name).to eq(name)
+      expect(result.user.email).to eq(email)
+      expect(result.user.username).to eq("John_Doe")
+      expect(result.user.id).to eq(Oauth2UserInfo.find_by(uid: @uid, provider: @authenticator.name).user_id)
+    end
+
     describe "sync_groups" do
 
       let(:group_names) { ["group_1", "group_2", "group_3", "group_4"] }
