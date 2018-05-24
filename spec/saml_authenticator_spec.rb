@@ -126,6 +126,7 @@ describe SamlAuthenticator do
       expect(result.user.name).to eq(name)
       expect(result.user.email).to eq(email)
       expect(result.user.username).to eq("John_Doe")
+      expect(result.user.active).to eq(true)
       expect(result.user.id).to eq(Oauth2UserInfo.find_by(uid: @uid, provider: @authenticator.name).user_id)
     end
 
