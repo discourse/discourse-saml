@@ -101,7 +101,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       result.username = attributes['screenName'].try(:first)
       result.username = attributes['uid'].try(:first) if GlobalSetting.try(:saml_use_uid)
     end
-    result.username = UserNameSuggester.suggest(result.name || result.email)
+    result.username ||= UserNameSuggester.suggest(result.name || result.email)
     result.username ||= uid
 
     if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
