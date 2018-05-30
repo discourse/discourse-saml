@@ -130,6 +130,55 @@ describe SamlAuthenticator do
       expect(result.user.id).to eq(Oauth2UserInfo.find_by(uid: @uid, provider: @authenticator.name).user_id)
     end
 
+    describe "username" do
+      let(:name) { "John Doe" }
+      let(:email) { "johndoe@example.com" }
+      let(:screen_name) { "johndoe" }
+      let(:hash) { OmniAuth::AuthHash.new(
+          uid: @uid,
+          info: {
+              name: name,
+              email: email
+          },
+          extra: {
+            raw_info: {
+              attributes: {
+                uid: @uid.to_s.split(","),
+                screenName: screen_name.split(",")
+              }
+            }
+          }
+        )
+      }
+
+      it 'should be equal to uid' do
+        GlobalSetting.stubs(:saml_use_uid).returns(true)
+
+        result = @authenticator.after_authenticate(hash)
+        expect(result.username).to eq(@uid.to_s)
+      end
+
+      it 'should be equal to screenName' do
+        result = @authenticator.after_authenticate(hash)
+        expect(result.username).to eq(screen_name)
+      end
+
+      it 'should be populated from name' do
+        hash.extra = nil
+
+        result = @authenticator.after_authenticate(hash)
+        expect(result.username).to eq(name.sub(" ", "_"))
+      end
+
+      it 'should be populated from email' do
+        hash.extra = nil
+        hash.info.name = nil
+
+        result = @authenticator.after_authenticate(hash)
+        expect(result.username).to eq(email.split("@")[0])
+      end
+    end
+
     describe "sync_groups" do
 
       let(:group_names) { ["group_1", "group_2", "group_3", "group_4"] }

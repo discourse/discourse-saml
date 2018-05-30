@@ -97,12 +97,17 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       log("#{name}_auth_extra: #{extra_data.inspect}")
     end
 
-    if attributes.present?
-      result.username = attributes['screenName'].try(:first)
-      result.username = attributes['uid'].try(:first) if GlobalSetting.try(:saml_use_uid)
+    result.username = begin
+      if attributes.present?
+        username = attributes['screenName'].try(:first)
+        username = attributes['uid'].try(:first) if GlobalSetting.try(:saml_use_uid)
+      end
+
+      username ||= UserNameSuggester.suggest(result.name) if result.name != uid
+      username ||= UserNameSuggester.suggest(result.email) if result.email != uid
+      username ||= uid
+      username
     end
-    result.username ||= UserNameSuggester.suggest(result.name || result.email)
-    result.username ||= uid
 
     if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
       result.skip_email_validation = true
