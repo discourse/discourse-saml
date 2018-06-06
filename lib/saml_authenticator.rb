@@ -52,6 +52,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       issuer: Discourse.base_url,
                       idp_sso_target_url: setting(:target_url),
                       idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
+                      idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
                       idp_cert: setting(:cert),
                       request_attributes: request_attributes,
                       attribute_statements: attribute_statements,
@@ -61,8 +62,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       certificate: GlobalSetting.try(:saml_sp_certificate),
                       private_key: GlobalSetting.try(:saml_sp_private_key),
                       security: {
-                        authn_requests_signed: GlobalSetting.try(:saml_authn_requests_signed) ? true : false,
-                        want_assertions_signed: GlobalSetting.try(:saml_want_assertions_signed) ? true : false,
+                        authn_requests_signed: !!GlobalSetting.try(:saml_authn_requests_signed),
+                        want_assertions_signed: !!GlobalSetting.try(:saml_want_assertions_signed),
                         signature_method: XMLSecurity::Document::RSA_SHA1
                       }
   end

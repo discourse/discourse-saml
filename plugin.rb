@@ -45,9 +45,12 @@ if request_method == 'post'
           settings.idp_sso_target_url = GlobalSetting.saml_target_url
           settings.idp_cert ||= GlobalSetting.try(:saml_cert)
         else
-          settings = OneLogin::RubySaml::Settings.new(:idp_sso_target_url => GlobalSetting.saml_target_url,
-                                                      :idp_cert_fingerprint => GlobalSetting.try(:saml_cert_fingerprint),
-                                                      :idp_cert => GlobalSetting.try(:saml_cert))
+          settings = OneLogin::RubySaml::Settings.new(
+            idp_sso_target_url: GlobalSetting.saml_target_url,
+            idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
+            idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
+            idp_cert: GlobalSetting.try(:saml_cert),
+          )
         end
 
         settings.compress_request = false
