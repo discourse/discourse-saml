@@ -32,6 +32,8 @@ if request_method == 'post'
 
     class DiscourseSaml::DiscourseSamlController < ::ApplicationController
       skip_before_action :check_xhr
+      skip_before_action :redirect_to_login_if_required, only: [:index]
+
       def index
         authn_request = OneLogin::RubySaml::Authrequest.new
 
