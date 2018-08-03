@@ -232,4 +232,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
   end
 
+  def enabled?
+    true # SAML plugin has no enabled setting
+  end
 end
