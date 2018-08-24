@@ -164,7 +164,29 @@ if request_method == 'post'
 
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
-
+        
+        render inline: <<-HTML_FORM
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+    <body onload="document.forms[0].submit()">
+      <noscript>
+        <p>
+          <strong>Note:</strong> Since your browser does not support JavaScript,
+          you must press the Continue button once to proceed.
+        </p>
+      </noscript>
+      <form action="#{GlobalSetting.saml_target_url}" method="post">
+        <div>
+          <input type="hidden" name="SAMLRequest" value="#{@saml_req}"/>
+        </div>
+        <noscript>
+          <div>
+            <input type="submit" value="Continue"/>
+          </div>
+        </noscript>
+      </form>
+    </body>
+  </html>
+HTML_FORM
        
       end
     end
