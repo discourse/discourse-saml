@@ -3,12 +3,11 @@
 # version: 0.1
 # author: Robin Ward
 
-require_dependency 'auth/oauth2_authenticator'
-
 gem 'macaddr', '1.0.0'
 gem 'uuid', '2.3.7'
-gem 'ruby-saml', '1.3.1'
-gem "omniauth-saml", '1.6.0'
+gem 'ruby-saml', '1.8.0'
+gem "omniauth-saml", '1.10.0'
+#gem 'saml2ruby', '1.1.0'
 
 request_method = GlobalSetting.try(:saml_request_method) || 'get'
 
@@ -24,8 +23,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       :assertion_consumer_service_url => Discourse.base_url + "/auth/saml/callback",
                       :custom_url => (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil
   end
-
+  
+  
+  
   def after_authenticate(auth)
+    Rails.logger.info 'after authenticate'
     result = Auth::Result.new
 
     if GlobalSetting.try(:saml_log_auth)
@@ -47,10 +49,17 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     result.email = auth[:info].email || uid
     result.email_valid = true
-
-    if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
-      result.skip_email_validation = true
-    end
+    result.skip_email_validation = true
+   
+    result.user =  User.where(username: result.username).first ||
+      User.new(
+        username: result.username,
+            name: result.name,
+           email: result.email,
+           admin: false,
+          active: true,
+        approved: true
+      ).tap(&:save!)
 
     current_info = ::PluginStore.get("saml", "saml_user_#{uid}")
     if current_info
@@ -62,14 +71,59 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     if GlobalSetting.try(:saml_clear_username) && result.user.blank?
       result.username = ''
     end
-
+    
     result.extra_data = { saml_user_id: uid }
+    groups = auth.extra[:raw_info].attributes['role']
+    if(result.user) 
+        update_user_groups(result.user, groups)
+    end
     result
   end
 
   def after_create_account(user, auth)
+    groups = auth.extra[:raw_info].attributes['role']
     ::PluginStore.set("saml", "saml_user_#{auth[:extra_data][:saml_user_id]}", {user_id: user.id })
+    update_user_groups(user, groups)
   end
+
+  def update_user_groups(user, groups)
+    Rails.logger.info 'update user groups'
+    Group.joins(:users).where(users: { id: user.id } ).each do |c|
+      gname = c.name
+      if groups.include?(gname)
+         groups.delete(gname) # remove it from the list
+      else
+        c.group_users.where(user_id: user.id).destroy_all
+        Rails.logger.info "Would remove group " + c.name
+      end
+    end
+      
+    groups.each do |c|
+    grp = Group.where(name: c).first
+       if not grp.nil?
+         grp.group_users.create(user_id: user.id, group_id: grp.id)
+         Rails.logger.info "adding user to " + grp.name
+       end
+    end
+
+    if groups.include?('discourse-moderators')
+         user.moderator = true
+         user.save
+    else
+        user.moderator = false
+        user.save
+    end
+    if groups.include?('discourse-admins')
+         user.admin = true
+         user.save
+    else
+        user.admin = false
+        user.save
+    end
+      
+  end
+
+
 end
 
 if request_method == 'post'
@@ -111,28 +165,7 @@ if request_method == 'post'
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
 
-        render text: <<-HTML_FORM
-  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-    <body onload="document.forms[0].submit()">
-      <noscript>
-        <p>
-          <strong>Note:</strong> Since your browser does not support JavaScript,
-          you must press the Continue button once to proceed.
-        </p>
-      </noscript>
-      <form action="#{GlobalSetting.saml_target_url}" method="post">
-        <div>
-          <input type="hidden" name="SAMLRequest" value="#{@saml_req}"/>
-        </div>
-        <noscript>
-          <div>
-            <input type="submit" value="Continue"/>
-          </div>
-        </noscript>
-      </form>
-    </body>
-  </html>
-HTML_FORM
+       
       end
     end
 
