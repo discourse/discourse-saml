@@ -3,6 +3,8 @@
 # version: 0.1
 # author: Robin Ward
 
+register_asset 'stylesheets/saml.scss'
+
 require_dependency 'auth/oauth2_authenticator'
 
 gem 'macaddr', '1.0.0'
