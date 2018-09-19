@@ -18,6 +18,14 @@ after_initialize do
   [
     '../app/jobs/onceoff/migrate_saml_user_infos.rb'
   ].each { |path| load File.expand_path(path, __FILE__) }
+
+  if GlobalSetting.try(:saml_slo_target_url).present?
+    SiteSetting.class_eval do
+      def self.logout_redirect
+        Discourse.base_url + "/auth/saml/spslo"
+      end
+    end
+  end
 end
 
 request_method = GlobalSetting.try(:saml_request_method) || 'get'
