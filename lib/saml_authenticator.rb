@@ -52,6 +52,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       issuer: Discourse.base_url,
                       idp_sso_target_url: setting(:target_url),
                       idp_slo_target_url: setting(:slo_target_url),
+                      slo_default_relay_state: Discourse.base_url,
                       idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
                       idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
                       idp_cert: setting(:cert),
