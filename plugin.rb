@@ -2,6 +2,7 @@
 # about: SAML Auth Provider
 # version: 0.1
 # author: Robin Ward
+# url: https://github.com/discourse/discourse-saml
 
 register_asset 'stylesheets/saml.scss'
 
