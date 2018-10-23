@@ -1,0 +1,3 @@
+en:
+  login:
+    use_saml_auth: "Please use the company SSO to login with your account '%{email}'."

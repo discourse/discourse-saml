@@ -27,6 +27,75 @@ after_initialize do
       end
     end
   end
+
+  if GlobalSetting.try(:saml_forced_domains).present?
+    SessionController.class_eval do
+      alias_method :discourse_create, :create
+
+      def create
+        params.require(:login)
+        login = params[:login].strip
+        login = login[1..-1] if login[0] == "@"
+
+        if user = User.find_by_username_or_email(login)
+          email = user.email
+
+          GlobalSetting.saml_forced_domains.split(",").each do |domain|
+            if email.end_with?("@#{domain}")
+              render json: { error: I18n.t("login.use_saml_auth", email: email) }
+              return
+            end
+          end
+        end
+
+        discourse_create
+      end
+    end
+
+    Users::OmniauthCallbacksController.class_eval do
+      before_action :check_email_domain, only: [:complete]
+
+      def check_email_domain
+        auth = request.env["omniauth.auth"]
+        raise Discourse::NotFound unless request.env["omniauth.auth"]
+
+        auth[:session] = session
+
+        return if params[:provider] == "saml"
+
+        authenticator = self.class.find_authenticator(params[:provider])
+        provider = DiscoursePluginRegistry.auth_providers.find { |p| p.name == params[:provider] }
+
+        if authenticator.can_connect_existing_user? && current_user
+          @auth_result = authenticator.after_authenticate(auth, existing_account: current_user)
+        else
+          @auth_result = authenticator.after_authenticate(auth)
+        end
+
+        email = @auth_result.user&.email || @auth_result.email
+        return if email.blank?
+
+        GlobalSetting.saml_forced_domains.split(",").each do |domain|
+          if email.end_with?("@#{domain}")
+            @auth_result.failed = true
+            @auth_result.failed_reason = I18n.t("login.use_saml_auth", email: email)
+            return
+          end
+        end
+      end
+
+      alias_method :discourses_complete, :complete
+
+      def complete
+        if @auth_result&.failed?
+          flash[:error] = @auth_result.failed_reason.html_safe
+          return render('failure')
+        end
+
+        discourses_complete
+      end
+    end
+  end
 end
 
 request_method = GlobalSetting.try(:saml_request_method) || 'get'
