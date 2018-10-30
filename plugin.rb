@@ -29,6 +29,42 @@ after_initialize do
   end
 
   if GlobalSetting.try(:saml_forced_domains).present?
+
+    GlobalSetting.class_eval do
+
+      def self.is_saml_forced_domain?(email)
+        return if email.blank?
+
+        GlobalSetting.saml_forced_domains.split(",").each do |domain|
+          return true if email.end_with?("@#{domain}")
+        end
+
+        false
+      end
+    end
+
+    UsersController.class_eval do
+      alias_method :discourse_email_login, :email_login
+
+      def email_login
+        raise Discourse::NotFound if !SiteSetting.enable_local_logins_via_email
+        return redirect_to path("/") if current_user
+
+        expires_now
+        params.require(:login)
+
+        user = User.human_users.find_by_username_or_email(params[:login])
+        user_presence = user.present? && !user.staged
+
+        if user_presence && GlobalSetting.is_saml_forced_domain?(user.email)
+          render_json_error(I18n.t("login.use_saml_auth"))
+          return
+        end
+
+        discourse_email_login
+      end
+    end
+
     SessionController.class_eval do
       alias_method :discourse_create, :create
 
@@ -36,16 +72,11 @@ after_initialize do
         params.require(:login)
         login = params[:login].strip
         login = login[1..-1] if login[0] == "@"
+        user = User.find_by_username_or_email(login)
 
-        if user = User.find_by_username_or_email(login)
-          email = user.email
-
-          GlobalSetting.saml_forced_domains.split(",").each do |domain|
-            if email.end_with?("@#{domain}")
-              render json: { error: I18n.t("login.use_saml_auth", email: email) }
-              return
-            end
-          end
+        if user && GlobalSetting.is_saml_forced_domain?(user.email)
+          render json: { error: I18n.t("login.use_saml_auth") }
+          return
         end
 
         discourse_create
@@ -73,14 +104,11 @@ after_initialize do
         end
 
         email = @auth_result.user&.email || @auth_result.email
-        return if email.blank?
 
-        GlobalSetting.saml_forced_domains.split(",").each do |domain|
-          if email.end_with?("@#{domain}")
-            @auth_result.failed = true
-            @auth_result.failed_reason = I18n.t("login.use_saml_auth", email: email)
-            return
-          end
+        if GlobalSetting.is_saml_forced_domain?(email)
+          @auth_result.failed = true
+          @auth_result.failed_reason = I18n.t("login.use_saml_auth")
+          return
         end
       end
 
