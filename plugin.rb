@@ -172,9 +172,11 @@ if request_method == 'post'
         saml_params = authn_request.create_params(settings, {})
         @saml_req = saml_params['SAMLRequest']
 
+        script_path = 'plugins/discourse-saml/javascripts/submit-form-on-load.js'
+
         render inline: <<-HTML_FORM
   <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-    <body onload="document.forms[0].submit()">
+    <body>
       <noscript>
         <p>
           <strong>Note:</strong> Since your browser does not support JavaScript,
@@ -191,6 +193,7 @@ if request_method == 'post'
           </div>
         </noscript>
       </form>
+      <script src="#{UrlHelper.absolute(script_path, GlobalSetting.cdn_url)}"></script>
     </body>
   </html>
 HTML_FORM
