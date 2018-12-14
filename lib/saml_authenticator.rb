@@ -204,11 +204,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       groups_to_remove &= removable_groups if removable_groups.present?
     end
 
-    Group.where(name: groups_to_add).each do |group|
+    Group.where('LOWER(name) IN (?) AND NOT automatic', groups_to_add).each do |group|
       group.add user
     end
 
-    Group.where(name: groups_to_remove).each do |group|
+    Group.where('LOWER(name) IN (?) AND NOT automatic', groups_to_remove).each do |group|
       group.remove user
     end
   end
