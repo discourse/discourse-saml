@@ -181,11 +181,11 @@ describe SamlAuthenticator do
 
     describe "sync_groups" do
 
-      let(:group_names) { ["group_1", "group_2", "group_3", "group_4"] }
+      let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
 
       before do
         GlobalSetting.stubs(:saml_sync_groups).returns(true)
-        @groups = group_names.map { |name| Fabricate(:group, name: name) }
+        @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
 
         @groups[3].add @user
         @hash = auth_hash(
@@ -197,14 +197,14 @@ describe SamlAuthenticator do
 
       it 'sync users to the given groups' do
         result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(0, 3))
+        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(0, 3).map(&:downcase))
       end
 
       it 'sync users to the given groups within scope' do
         GlobalSetting.stubs(:saml_sync_groups_list).returns(group_names.slice(1, 3).join("|"))
 
         result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(1, 2))
+        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(1, 2).map(&:downcase))
       end
 
     end

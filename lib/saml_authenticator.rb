@@ -188,11 +188,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def sync_groups
     return unless GlobalSetting.try(:saml_sync_groups)
 
-    total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|')
+    total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|').map(&:downcase)
     group_attribute = GlobalSetting.try(:saml_groups_attribute) || 'memberOf'
-    user_group_list = attributes[group_attribute] || []
-    groups_to_add = user_group_list + attr('groups_to_add').split(",")
-    groups_to_remove = attr('groups_to_remove').split(",")
+    user_group_list = (attributes[group_attribute] || []).map(&:downcase)
+    groups_to_add = user_group_list + attr('groups_to_add').split(",").map(&:downcase)
+    groups_to_remove = attr('groups_to_remove').split(",").map(&:downcase)
 
     return if user_group_list.blank? && groups_to_add.blank? && groups_to_remove.blank?
 
