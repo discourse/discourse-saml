@@ -5,8 +5,8 @@
 A Discourse Plugin to enable authentication via SAML
 
 Setting up your idp:
-The entity-id should be: `http://example.com`
-The consumer assertion service url should be: `https://example.com/auth/saml/callback`
+The entity-id should be: `http://example.com` or can be defined with `DISCOURSE_SAML_ISSUER`.
+The consumer assertion service url should be: `https://example.com/auth/saml/callback` or can be defined with `DISCOURSE_SAML_ASSERTION_URL`.
 
 You may need to set your idp to send an extra custom attribute 'screenName', that will become the users id.
 
@@ -42,13 +42,26 @@ Add the following settings to your `discourse.conf` file:
 
 - `DISCOURSE_SAML_SP_CERTIFICATE`: SAML Service Provider Certificate
 - `DISCOURSE_SAML_SP_PRIVATE_KEY`: SAML Service Provider Private Key
+- `DISCOURSE_SAML_ASSERTION_URL`: Callback URL  defaults to "base_url + /auth/saml/callback"
+- `DISCOURSE_SAML_ISSUER`: SAML Service Provider entity-id (issuer)
 - `DISCOURSE_SAML_AUTHN_REQUESTS_SIGNED`: defaults to false
 - `DISCOURSE_SAML_WANT_ASSERTIONS_SIGNED`: defaults to false
 - `DISCOURSE_SAML_NAME_IDENTIFIER_FORMAT`: defaults to "urn:oasis:names:tc:SAML:2.0:protocol"
 - `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`: defaults to true
 - `DISCOURSE_SAML_VALIDATE_EMAIL_FIELDS`: defaults to blank. This setting accepts pipe separated group names that are supplied in `memberOf` attribute in SAML payload. If the group name specified in the value matches that from `memberOf` attribute than the `email_valid` is set to `true`, otherwise it defaults to `false`. This setting overrides `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`.
 
-### Convering an RSA Key to a PEM
+If SAML provider return user informations  in "extrafields", use these settings:
+
+- `DISCOURSE_SAML_EXTRAFIELD_EMAIL`: optional, defaults to blank: define user email  
+- `DISCOURSE_SAML_EXTRAFIELD_FIRSTNAME`: optional, define user firstname
+- `DISCOURSE_SAML_EXTRAFIELD_LASTNAME`: optional, define user lastname
+
+"FIRSTNAME" & "LASTNAME" will be use for fullname, if only one of them are set, fullname will be firstname || lastname
+
+- `DISCOURSE_SAML_EXTRAFIELD_COMPANY`: optional, add user company in fullname : fullname + (company)  
+
+
+### Converting an RSA Key to a PEM
 
 If the idp has an RSA key split up as modulus and exponent, this javascript library makes
 it easy to convert to pem:

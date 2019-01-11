@@ -113,6 +113,33 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       username ||= uid
       username
     end
+    
+    if attributes.present?
+        
+        email_extrafield = GlobalSetting.try(:saml_extrafield_email).presence || ""
+        firstname_extrafield = GlobalSetting.try(:saml_extrafield_firstname).presence || ""
+        lastname_extrafield = GlobalSetting.try(:saml_extrafield_lastname).presence || ""
+        company_extrafield = GlobalSetting.try(:saml_extrafield_company).presence || ""
+        
+        unless email_extrafield.nil? || email_extrafield.empty?
+            result.email = attributes[email_extrafield].try(:first)
+        end
+
+        unless firstname_extrafield.nil? || firstname_extrafield.empty?
+            result.name = attributes[firstname_extrafield].try(:first) || ""
+        end
+        
+        if (lastname_extrafield != nil && !firstname_extrafield.empty?)
+            result.name = result.name + " " + attributes[lastname_extrafield].try(:first)
+        elsif (lastname_extrafield != nil)
+            result.name = attributes[lastname_extrafield].try(:first) || ""
+        end
+        
+        unless company_extrafield.nil? && result.name.empty?
+            result.name = result.name + " (" + attributes[company_extrafield].try(:first) + ")"
+        end
+            
+    end
 
     if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
       result.skip_email_validation = true

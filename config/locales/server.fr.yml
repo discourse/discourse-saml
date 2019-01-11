@@ -1,0 +1,3 @@
+fr:
+  login:
+    use_saml_auth: "Merci d'utiliser la Fédération d'Identités de l'entreprise pour vous authentifier."
