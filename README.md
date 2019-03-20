@@ -1,6 +1,6 @@
 > ⚠ Discourse has successfully integrated with SAML for many enterprises, but SAML integration is often complex, error prone, and typically requires customization / changes for that organization's _specific implementation_ of SAML. This work is best undertaken by software developers familiar with Discourse. We are highly familiar with Discourse, and available to do that work [on an enterprise hosting plan](https://discourse.org/buy).
 
-### discourse-saml
+### About
 
 A Discourse Plugin to enable authentication via SAML
 
@@ -38,7 +38,7 @@ Add the following settings to your `discourse.conf` file:
 
 - `saml_target_url`
 
-### Supported settings
+### Other Supported settings
 
 - `DISCOURSE_SAML_SP_CERTIFICATE`: SAML Service Provider Certificate
 - `DISCOURSE_SAML_SP_PRIVATE_KEY`: SAML Service Provider Private Key
@@ -48,10 +48,9 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`: defaults to true
 - `DISCOURSE_SAML_VALIDATE_EMAIL_FIELDS`: defaults to blank. This setting accepts pipe separated group names that are supplied in `memberOf` attribute in SAML payload. If the group name specified in the value matches that from `memberOf` attribute than the `email_valid` is set to `true`, otherwise it defaults to `false`. This setting overrides `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`.
 
-### Convering an RSA Key to a PEM
+### Converting an RSA Key to a PEM
 
-If the idp has an RSA key split up as modulus and exponent, this javascript library makes
-it easy to convert to pem:
+If the idp has an RSA key split up as modulus and exponent, this javascript library makes it easy to convert to pem:
 
 https://www.npmjs.com/package/rsa-pem-from-mod-exp
 
