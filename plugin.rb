@@ -218,6 +218,5 @@ auth_provider title: button_title,
               message: "Authorizing with #{title} (make sure pop up blockers are not enabled)",
               frame_width: GlobalSetting.try(:saml_frame_width) || 600,
               frame_height: GlobalSetting.try(:saml_frame_height) || 400,
-              background_color: '#003366',
               full_screen_login: GlobalSetting.try(:saml_full_screen_login) || false,
               custom_url: request_method == 'post' ? "/discourse_saml" : nil
