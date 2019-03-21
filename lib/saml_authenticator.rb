@@ -97,9 +97,12 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     if GlobalSetting.try(:saml_debug_auth)
-      log("#{name}_auth_uid: #{uid}")
-      log("#{name}_auth_info: #{info.inspect}")
-      log("#{name}_auth_extra: #{extra_data.inspect}")
+      data = {
+        uid: uid,
+        info: info,
+        extra: extra_data
+      }
+      log("#{name}_auth: #{data.inspect}")
     end
 
     result.username = begin
