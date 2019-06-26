@@ -109,6 +109,15 @@ describe SamlAuthenticator do
       end
     end
 
+    it 'should get uid value from extra attributes param' do
+      GlobalSetting.stubs(:saml_use_attributes_uid).returns("true")
+
+      hash = auth_hash('uid' => ["789"])
+
+      @authenticator.after_authenticate(hash)
+      expect(Oauth2UserInfo.last.uid).to eq("789")
+    end
+
     it 'creates new account automatically' do
       GlobalSetting.stubs(:saml_auto_create_account).returns(true)
       name = "John Doe"
