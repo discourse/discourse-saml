@@ -80,15 +80,17 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     uid = auth[:uid]
     self.info = auth[:info]
 
+    extra_data = auth.extra || {}
+    raw_info = extra_data[:raw_info]
+    @attributes = raw_info&.attributes || {}
+
+    uid = attributes['uid'].try(:first) || uid if GlobalSetting.try(:saml_use_attributes_uid)
+
     auth[:provider] = name
     auth[:info][:name] ||= uid
     auth[:info][:email] ||= uid
 
     result = super
-
-    extra_data = auth.extra || {}
-    raw_info = extra_data[:raw_info]
-    @attributes = raw_info&.attributes || {}
 
     if GlobalSetting.try(:saml_log_auth)
       ::PluginStore.set("saml", "#{name}_last_auth", auth.inspect)
