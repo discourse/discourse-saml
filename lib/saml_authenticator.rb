@@ -77,14 +77,14 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_authenticate(auth)
-    uid = auth[:uid]
     self.info = auth[:info]
 
     extra_data = auth.extra || {}
     raw_info = extra_data[:raw_info]
     @attributes = raw_info&.attributes || {}
 
-    uid = attributes['uid'].try(:first) || uid if GlobalSetting.try(:saml_use_attributes_uid)
+    auth[:uid] = attributes['uid'].try(:first) || auth[:uid] if GlobalSetting.try(:saml_use_attributes_uid)
+    uid = auth[:uid]
 
     auth[:provider] = name
     auth[:info][:name] ||= uid
