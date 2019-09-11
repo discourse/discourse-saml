@@ -1,0 +1,4 @@
+en:
+  login:
+    saml:
+      name: "SAML"
