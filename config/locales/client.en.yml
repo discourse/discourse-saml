@@ -1,4 +1,5 @@
 en:
-  login:
-    saml:
-      name: "SAML"
+  js:
+    login:
+      saml:
+        name: "SAML"
