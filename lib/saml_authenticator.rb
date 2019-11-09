@@ -147,6 +147,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       sync_groups
       sync_custom_fields
       sync_email(result.email)
+      sync_moderator
     end
 
     result
@@ -164,6 +165,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     @attributes = auth[:extra_data][:saml_attributes]
 
     sync_groups
+    sync_moderator
     sync_custom_fields
   end
 
@@ -240,6 +242,18 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       user.email = email
       user.save
     end
+  end
+
+  def sync_moderator
+    return unless GlobalSetting.try(:saml_sync_moderator)
+
+    is_moderator_attribute = GlobalSetting.try(:saml_moderator_attribute) || 'isModerator'
+    is_moderator = ['1', 'true'].include?(attributes[is_moderator_attribute].try(:first).to_s.downcase)
+
+    return if user.moderator == is_moderator
+
+    user.moderator = is_moderator
+    user.save
   end
 
   def enabled?

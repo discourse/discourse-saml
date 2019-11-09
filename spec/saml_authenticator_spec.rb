@@ -218,6 +218,29 @@ describe SamlAuthenticator do
 
     end
 
+    describe "set moderator" do
+      before do
+        GlobalSetting.stubs(:saml_sync_moderator).returns(true)
+      end
+
+      it 'user should be a moderator (default param)' do
+        hash = auth_hash(
+          'isModerator' => 1,
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.moderator).to eq(true)
+      end
+
+      it 'user should be a moderator (using specified saml_moderator_attribute)' do
+        GlobalSetting.stubs(:saml_moderator_attribute).returns('is_a_moderator')
+        hash = auth_hash(
+          'is_a_moderator' => 'true',
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.moderator).to eq(true)
+      end
+    end
+
     describe "global setting" do
       it "matches request_attributes count" do
         expect(@authenticator.request_attributes.count).to eq(4)
