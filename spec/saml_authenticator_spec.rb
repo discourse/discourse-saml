@@ -225,7 +225,7 @@ describe SamlAuthenticator do
 
       it 'user should be a moderator (default param)' do
         hash = auth_hash(
-          'isModerator' => 1,
+          'isModerator' => [1],
         )
         result = @authenticator.after_authenticate(hash)
         expect(result.user.moderator).to eq(true)
@@ -234,7 +234,7 @@ describe SamlAuthenticator do
       it 'user should be a moderator (using specified saml_moderator_attribute)' do
         GlobalSetting.stubs(:saml_moderator_attribute).returns('is_a_moderator')
         hash = auth_hash(
-          'is_a_moderator' => 'true',
+          'is_a_moderator' => ['true'],
         )
         result = @authenticator.after_authenticate(hash)
         expect(result.user.moderator).to eq(true)
