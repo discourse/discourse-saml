@@ -241,6 +241,50 @@ describe SamlAuthenticator do
       end
     end
 
+    describe "set trust_level" do
+      before do
+        GlobalSetting.stubs(:saml_sync_trust_level).returns(true)
+      end
+
+      it 'user should have trust level 3 (default param)' do
+        hash = auth_hash(
+          'trustLevel' => [3],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(3)
+        expect(result.user.manual_locked_trust_level).to eq(3)
+      end
+
+      it 'user should have trust level 3 (using specified saml_trust_level_attribute)' do
+        GlobalSetting.stubs(:saml_trust_level_attribute).returns('my_trust_level')
+        hash = auth_hash(
+          'my_trust_level' => ['3'],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(3)
+        expect(result.user.manual_locked_trust_level).to eq(3)
+      end
+
+      it 'user should get lower trust level' do
+        @user.trust_level = 4;
+        hash = auth_hash(
+          'trustLevel' => [1],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(1)
+        expect(result.user.manual_locked_trust_level).to eq(1)
+      end
+
+      it 'invalid trust levels should not be used' do
+        @user.trust_level = 1;
+        hash = auth_hash(
+          'trustLevel' => [15],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(1)
+      end
+    end
+
     describe "global setting" do
       it "matches request_attributes count" do
         expect(@authenticator.request_attributes.count).to eq(4)

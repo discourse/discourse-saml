@@ -148,6 +148,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       sync_custom_fields
       sync_email(result.email)
       sync_moderator
+      sync_trust_level
     end
 
     result
@@ -166,6 +167,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     sync_groups
     sync_moderator
+    sync_trust_level
     sync_custom_fields
   end
 
@@ -254,6 +256,24 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     user.moderator = is_moderator
     user.save
+  end
+
+  def sync_trust_level
+    return unless GlobalSetting.try(:saml_sync_trust_level)
+
+    trust_level_attribute = GlobalSetting.try(:saml_trust_level_attribute) || 'trustLevel'
+    level = attributes[trust_level_attribute].try(:first).to_i
+
+    return unless level.between?(1,4)
+
+    if user.manual_locked_trust_level != level
+      user.manual_locked_trust_level = level
+      user.save
+    end
+
+    return if user.trust_level == level
+
+    user.change_trust_level!(level, log_action_for: user)
   end
 
   def enabled?
