@@ -196,22 +196,31 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
   def sync_groups
     return unless GlobalSetting.try(:saml_sync_groups)
-
-    total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|').map(&:downcase)
+    groups_fullsync = GlobalSetting.try(:saml_groups_fullsync) || false
     group_attribute = GlobalSetting.try(:saml_groups_attribute) || 'memberOf'
     user_group_list = (attributes[group_attribute] || []).map(&:downcase)
-    groups_to_add = user_group_list + attr('groups_to_add').split(",").map(&:downcase)
-    groups_to_remove = attr('groups_to_remove').split(",").map(&:downcase)
+
+    if groups_fullsync
+      user_has_groups = user.groups.select{|g| g.automatic == false}.map(&:name).map(&:downcase)
+      if user_has_groups != nil
+        groups_to_add = user_group_list - user_has_groups
+        groups_to_remove = user_has_groups - user_group_list
+      end
+    else
+      total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|').map(&:downcase)
+      groups_to_add = user_group_list + attr('groups_to_add').split(",").map(&:downcase)
+      groups_to_remove = attr('groups_to_remove').split(",").map(&:downcase)
+
+      if total_group_list.present?
+        groups_to_add = total_group_list & groups_to_add
+
+        removable_groups = groups_to_remove.dup
+        groups_to_remove = total_group_list - groups_to_add
+        groups_to_remove &= removable_groups if removable_groups.present?
+      end
+    end
 
     return if user_group_list.blank? && groups_to_add.blank? && groups_to_remove.blank?
-
-    if total_group_list.present?
-      groups_to_add = total_group_list & groups_to_add
-
-      removable_groups = groups_to_remove.dup
-      groups_to_remove = total_group_list - groups_to_add
-      groups_to_remove &= removable_groups if removable_groups.present?
-    end
 
     Group.where('LOWER(name) IN (?) AND NOT automatic', groups_to_add).each do |group|
       group.add user

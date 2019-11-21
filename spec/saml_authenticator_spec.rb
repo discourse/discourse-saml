@@ -189,7 +189,6 @@ describe SamlAuthenticator do
     end
 
     describe "sync_groups" do
-
       let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
 
       before do
@@ -215,7 +214,27 @@ describe SamlAuthenticator do
         result = @authenticator.after_authenticate(@hash)
         expect(result.user.groups.pluck(:name)).to eq(group_names.slice(1, 2).map(&:downcase))
       end
+    end
 
+    describe "sync_groups with fullsync" do
+      let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
+
+      before do
+        GlobalSetting.stubs(:saml_sync_groups).returns(true)
+        GlobalSetting.stubs(:saml_groups_fullsync).returns(true)
+        @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
+
+        @hash = auth_hash(
+          'memberOf' => group_names.slice(0, 2)
+        )
+      end
+
+      it 'sync users to the given groups' do
+        @groups[0].add @user
+        @groups[3].add @user
+        result = @authenticator.after_authenticate(@hash)
+        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(0, 2).map(&:downcase))
+      end
     end
 
     describe "set moderator" do
