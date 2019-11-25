@@ -201,7 +201,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     user_group_list = (attributes[group_attribute] || []).map(&:downcase)
 
     if groups_fullsync
-      user_has_groups = user.groups.select{|g| g.automatic == false}.map(&:name).map(&:downcase)
+      user_has_groups = user.groups.where(automatic: false).pluck(:name).map(&:downcase)
       if user_has_groups != nil
         groups_to_add = user_group_list - user_has_groups
         groups_to_remove = user_has_groups - user_group_list
