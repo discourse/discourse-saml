@@ -38,6 +38,12 @@ Add the following settings to your `discourse.conf` file:
 
 - `saml_target_url`
 
+### Group sync
+- `DISCOURSE_SAML_SYNC_GROUPS`: Sync groups. Defaults to false.
+- `DISCOURSE_SAML_GROUPS_ATTRIBUTE`: SAML attribute to use for group sync. Defaults to `memberOf`
+- `DISCOURSE_SAML_GROUPS_FULLSYNC`: Should the assigned groups be completely synced including adding AND removing groups based on the IDP? Defaults to false. If set to true, `DISCOURSE_SAML_SYNC_GROUPS_LIST` and SAML attribute `groups_to_add`/`groups_to_remove` are not used.
+- `DISCOURSE_SAML_SYNC_GROUPS_LIST`: Groups mentioned in this list are synced if they are referenced by the IDP (in `memberOf` SAML attribue). Any other groups will not be removed/updated.
+
 ### Other Supported settings
 
 - `DISCOURSE_SAML_SP_CERTIFICATE`: SAML Service Provider Certificate
@@ -53,6 +59,11 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_FRAME_WIDTH`: '600'
 - `DISCOURSE_SAML_FRAME_HEIGHT`: '400'
 - `DISCOURSE_SAML_FULL_SCREEN_LOGIN`: false
+- `DISCOURSE_SAML_SYNC_MODERATOR`: defaults to false. If set to `true` user get moderator role if SAML attribute `isModerator` (or attribute specified by `DISCOURSE_SAML_MODERATOR_ATTRIBUTE`) is 1 or true.  
+- `DISCOURSE_SAML_MODERATOR_ATTRIBUTE`: defaults to `isModerator`
+- `DISCOURSE_SAML_SYNC_TRUST_LEVEL`: defaults to false. If set to `true` user's trust level is set to the SAML attribute `trustLevel` (or attribute specified by `DISCOURSE_SAML_TRUST_LEVEL_ATTRIBUTE`) which needs to be between 1 and 4.
+- `DISCOURSE_SAML_TRUST_LEVEL_ATTRIBUTE`: defaults to `trustLevel`
+
 
 ### Converting an RSA Key to a PEM
 
@@ -63,4 +74,3 @@ https://www.npmjs.com/package/rsa-pem-from-mod-exp
 ### License
 
 MIT
-

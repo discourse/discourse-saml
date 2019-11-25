@@ -77,18 +77,20 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def after_authenticate(auth)
-    uid = auth[:uid]
     self.info = auth[:info]
+
+    extra_data = auth.extra || {}
+    raw_info = extra_data[:raw_info]
+    @attributes = raw_info&.attributes || {}
+
+    auth[:uid] = attributes['uid'].try(:first) || auth[:uid] if GlobalSetting.try(:saml_use_attributes_uid)
+    uid = auth[:uid]
 
     auth[:provider] = name
     auth[:info][:name] ||= uid
     auth[:info][:email] ||= uid
 
     result = super
-
-    extra_data = auth.extra || {}
-    raw_info = extra_data[:raw_info]
-    @attributes = raw_info&.attributes || {}
 
     if GlobalSetting.try(:saml_log_auth)
       ::PluginStore.set("saml", "#{name}_last_auth", auth.inspect)
@@ -97,9 +99,12 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     if GlobalSetting.try(:saml_debug_auth)
-      log("#{name}_auth_uid: #{uid}")
-      log("#{name}_auth_info: #{info.inspect}")
-      log("#{name}_auth_extra: #{extra_data.inspect}")
+      data = {
+        uid: uid,
+        info: info,
+        extra: extra_data
+      }
+      log("#{name}_auth: #{data.inspect}")
     end
 
     result.username = begin
@@ -142,6 +147,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       sync_groups
       sync_custom_fields
       sync_email(result.email)
+      sync_moderator
+      sync_trust_level
     end
 
     result
@@ -159,6 +166,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     @attributes = auth[:extra_data][:saml_attributes]
 
     sync_groups
+    sync_moderator
+    sync_trust_level
     sync_custom_fields
   end
 
@@ -187,22 +196,31 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
   def sync_groups
     return unless GlobalSetting.try(:saml_sync_groups)
-
-    total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|').map(&:downcase)
+    groups_fullsync = GlobalSetting.try(:saml_groups_fullsync) || false
     group_attribute = GlobalSetting.try(:saml_groups_attribute) || 'memberOf'
     user_group_list = (attributes[group_attribute] || []).map(&:downcase)
-    groups_to_add = user_group_list + attr('groups_to_add').split(",").map(&:downcase)
-    groups_to_remove = attr('groups_to_remove').split(",").map(&:downcase)
+
+    if groups_fullsync
+      user_has_groups = user.groups.where(automatic: false).pluck(:name).map(&:downcase)
+      if user_has_groups.present?
+        groups_to_add = user_group_list - user_has_groups
+        groups_to_remove = user_has_groups - user_group_list
+      end
+    else
+      total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|').map(&:downcase)
+      groups_to_add = user_group_list + attr('groups_to_add').split(",").map(&:downcase)
+      groups_to_remove = attr('groups_to_remove').split(",").map(&:downcase)
+
+      if total_group_list.present?
+        groups_to_add = total_group_list & groups_to_add
+
+        removable_groups = groups_to_remove.dup
+        groups_to_remove = total_group_list - groups_to_add
+        groups_to_remove &= removable_groups if removable_groups.present?
+      end
+    end
 
     return if user_group_list.blank? && groups_to_add.blank? && groups_to_remove.blank?
-
-    if total_group_list.present?
-      groups_to_add = total_group_list & groups_to_add
-
-      removable_groups = groups_to_remove.dup
-      groups_to_remove = total_group_list - groups_to_add
-      groups_to_remove &= removable_groups if removable_groups.present?
-    end
 
     Group.where('LOWER(name) IN (?) AND NOT automatic', groups_to_add).each do |group|
       group.add user
@@ -235,6 +253,36 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       user.email = email
       user.save
     end
+  end
+
+  def sync_moderator
+    return unless GlobalSetting.try(:saml_sync_moderator)
+
+    is_moderator_attribute = GlobalSetting.try(:saml_moderator_attribute) || 'isModerator'
+    is_moderator = ['1', 'true'].include?(attributes[is_moderator_attribute].try(:first).to_s.downcase)
+
+    return if user.moderator == is_moderator
+
+    user.moderator = is_moderator
+    user.save
+  end
+
+  def sync_trust_level
+    return unless GlobalSetting.try(:saml_sync_trust_level)
+
+    trust_level_attribute = GlobalSetting.try(:saml_trust_level_attribute) || 'trustLevel'
+    level = attributes[trust_level_attribute].try(:first).to_i
+
+    return unless level.between?(1,4)
+
+    if user.manual_locked_trust_level != level
+      user.manual_locked_trust_level = level
+      user.save
+    end
+
+    return if user.trust_level == level
+
+    user.change_trust_level!(level, log_action_for: user)
   end
 
   def enabled?

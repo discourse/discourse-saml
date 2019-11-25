@@ -109,6 +109,15 @@ describe SamlAuthenticator do
       end
     end
 
+    it 'should get uid value from extra attributes param' do
+      GlobalSetting.stubs(:saml_use_attributes_uid).returns("true")
+
+      hash = auth_hash('uid' => ["789"])
+
+      @authenticator.after_authenticate(hash)
+      expect(Oauth2UserInfo.last.uid).to eq("789")
+    end
+
     it 'creates new account automatically' do
       GlobalSetting.stubs(:saml_auto_create_account).returns(true)
       name = "John Doe"
@@ -180,7 +189,6 @@ describe SamlAuthenticator do
     end
 
     describe "sync_groups" do
-
       let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
 
       before do
@@ -206,7 +214,94 @@ describe SamlAuthenticator do
         result = @authenticator.after_authenticate(@hash)
         expect(result.user.groups.pluck(:name)).to eq(group_names.slice(1, 2).map(&:downcase))
       end
+    end
 
+    describe "sync_groups with fullsync" do
+      let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
+
+      before do
+        GlobalSetting.stubs(:saml_sync_groups).returns(true)
+        GlobalSetting.stubs(:saml_groups_fullsync).returns(true)
+        @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
+
+        @hash = auth_hash(
+          'memberOf' => group_names.slice(0, 2)
+        )
+      end
+
+      it 'sync users to the given groups' do
+        @groups[0].add @user
+        @groups[3].add @user
+        result = @authenticator.after_authenticate(@hash)
+        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(0, 2).map(&:downcase))
+      end
+    end
+
+    describe "set moderator" do
+      before do
+        GlobalSetting.stubs(:saml_sync_moderator).returns(true)
+      end
+
+      it 'user should be a moderator (default param)' do
+        hash = auth_hash(
+          'isModerator' => [1],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.moderator).to eq(true)
+      end
+
+      it 'user should be a moderator (using specified saml_moderator_attribute)' do
+        GlobalSetting.stubs(:saml_moderator_attribute).returns('is_a_moderator')
+        hash = auth_hash(
+          'is_a_moderator' => ['true'],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.moderator).to eq(true)
+      end
+    end
+
+    describe "set trust_level" do
+      before do
+        GlobalSetting.stubs(:saml_sync_trust_level).returns(true)
+      end
+
+      it 'user should have trust level 3 (default param)' do
+        hash = auth_hash(
+          'trustLevel' => [3],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(3)
+        expect(result.user.manual_locked_trust_level).to eq(3)
+      end
+
+      it 'user should have trust level 3 (using specified saml_trust_level_attribute)' do
+        GlobalSetting.stubs(:saml_trust_level_attribute).returns('my_trust_level')
+        hash = auth_hash(
+          'my_trust_level' => ['3'],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(3)
+        expect(result.user.manual_locked_trust_level).to eq(3)
+      end
+
+      it 'user should get lower trust level' do
+        @user.trust_level = 4;
+        hash = auth_hash(
+          'trustLevel' => [1],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(1)
+        expect(result.user.manual_locked_trust_level).to eq(1)
+      end
+
+      it 'invalid trust levels should not be used' do
+        @user.trust_level = 1;
+        hash = auth_hash(
+          'trustLevel' => [15],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.trust_level).to eq(1)
+      end
     end
 
     describe "global setting" do
