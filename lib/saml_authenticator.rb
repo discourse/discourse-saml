@@ -87,7 +87,6 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     uid = auth[:uid]
 
     auth[:provider] = name
-    auth[:info][:name] ||= uid
     auth[:info][:email] ||= uid
 
     result = super
