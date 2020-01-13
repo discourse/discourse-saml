@@ -268,6 +268,36 @@ describe SamlAuthenticator do
       end
     end
 
+    describe "sync_groups with LDAP leaf cn" do
+      let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
+      let(:group_names_ldap) { ["cn=group_1,cn=groups,dc=example,dc=com", "cn=Group_2,cn=groups,dc=example,dc=com", "cn=GROUP_3,cn=groups,dc=example,dc=com", "cn=group_4,cn=groups,dc=example,dc=com"] }
+
+      before do
+        GlobalSetting.stubs(:saml_sync_groups).returns(true)
+        GlobalSetting.stubs(:saml_groups_ldap_leafcn).returns(true)
+        @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
+
+        @groups[3].add @user
+        @hash = auth_hash(
+          'memberOf' => group_names_ldap[0..1],
+          'groups_to_add' => [group_names[2]],
+          'groups_to_remove' => [group_names[3]],
+        )
+      end
+
+      it 'sync users to the given groups' do
+        result = @authenticator.after_authenticate(@hash)
+        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..2].map(&:downcase))
+      end
+
+      it 'sync users to the given groups within scope' do
+        GlobalSetting.stubs(:saml_sync_groups_list).returns(group_names[1..3].join("|"))
+
+        result = @authenticator.after_authenticate(@hash)
+        expect(result.user.groups.pluck(:name)).to match_array(group_names[1..2].map(&:downcase))
+      end
+    end
+
     describe "sync_groups with fullsync" do
       let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
 
