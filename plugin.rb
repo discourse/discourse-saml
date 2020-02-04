@@ -152,7 +152,7 @@ if request_method == 'post'
         if metadata_url
           idp_metadata_parser = OneLogin::RubySaml::IdpMetadataParser.new
           settings = idp_metadata_parser.parse_remote(metadata_url)
-          settings.idp_sso_target_url = GlobalSetting.saml_target_url
+          settings.idp_sso_target_url ||= GlobalSetting.saml_target_url
           settings.idp_cert ||= GlobalSetting.try(:saml_cert)
         else
           settings = OneLogin::RubySaml::Settings.new(
