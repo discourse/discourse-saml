@@ -188,6 +188,25 @@ describe SamlAuthenticator do
       end
     end
 
+    describe "sync_email" do
+      let(:new_email) { "johndoe@demo.com" }
+
+      before do
+        GlobalSetting.stubs(:saml_sync_email).returns(true)
+        @hash = auth_hash({})
+        @hash.info.email = new_email
+      end
+
+      it 'update email in user and oauth2_user_info models' do
+        oauth2_user_info = Fabricate(:oauth2_user_info, uid: @uid, user: @user)
+
+        result = @authenticator.after_authenticate(@hash)
+        expect(result.user.email).to eq(new_email)
+        oauth2_user_info.reload
+        expect(oauth2_user_info.email).to eq(new_email)
+      end
+    end
+
     describe "sync_groups" do
       let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
 

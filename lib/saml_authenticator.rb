@@ -154,7 +154,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       @user = result.user
       sync_groups
       sync_custom_fields
-      sync_email(result.email)
+      sync_email(result.email, uid)
       sync_moderator
       sync_trust_level
     end
@@ -249,7 +249,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     user.save_custom_fields
   end
 
-  def sync_email(email)
+  def sync_email(email, uid)
     return unless GlobalSetting.try(:saml_sync_email)
 
     email = Email.downcase(email)
@@ -260,6 +260,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     if email =~ EmailValidator.email_regex && existing_user.nil?
       user.email = email
       user.save
+
+      user.oauth2_user_infos.where(provider: name, uid: uid).update_all(email: email)
     end
   end
 
