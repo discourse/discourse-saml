@@ -49,17 +49,17 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def register_middleware(omniauth)
     omniauth.provider :saml,
                       name: name,
-                      issuer: Discourse.base_url,
+                      issuer: saml_base_url,
                       idp_sso_target_url: setting(:target_url),
                       idp_slo_target_url: setting(:slo_target_url),
-                      slo_default_relay_state: Discourse.base_url,
+                      slo_default_relay_state: saml_base_url,
                       idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
                       idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
                       idp_cert: setting(:cert),
                       request_attributes: request_attributes,
                       attribute_statements: attribute_statements,
-                      assertion_consumer_service_url: Discourse.base_url + "/auth/#{name}/callback",
-                      single_logout_service_url: Discourse.base_url + "/auth/#{name}/slo",
+                      assertion_consumer_service_url: saml_base_url + "/auth/#{name}/callback",
+                      single_logout_service_url: saml_base_url + "/auth/#{name}/slo",
                       name_identifier_format: GlobalSetting.try(:saml_name_identifier_format),
                       custom_url: (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
                       certificate: GlobalSetting.try(:saml_sp_certificate),
@@ -298,4 +298,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def enabled?
     true # SAML plugin has no enabled setting
   end
+
+  def saml_base_url 
+    GlobalSetting.try(:saml_base_url) || Discourse.base_url
+  end
+
 end
