@@ -174,7 +174,7 @@ if request_method == 'post'
 
         script_path = '/plugins/discourse-saml/javascripts/submit-form-on-load.js'
 
-        render inline: <<-HTML_FORM
+        render html: <<-HTML_FORM
   <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
     <body>
       <noscript>
