@@ -175,29 +175,31 @@ if request_method == 'post'
 
         script_path = '/plugins/discourse-saml/javascripts/submit-form-on-load.js'
 
-        render inline: <<-HTML_FORM
-  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-    <body>
-      <noscript>
-        <p>
-          <strong>Note:</strong> Since your browser does not support JavaScript,
-          you must press the Continue button once to proceed.
-        </p>
-      </noscript>
-      <form action="#{GlobalSetting.saml_target_url}" method="post">
-        <div>
-          <input type="hidden" name="SAMLRequest" value="#{@saml_req}"/>
-        </div>
-        <noscript>
-          <div>
-            <input type="submit" value="Continue"/>
-          </div>
-        </noscript>
-      </form>
-      <script src="#{UrlHelper.absolute(script_path, GlobalSetting.cdn_url)}"></script>
-    </body>
-  </html>
-HTML_FORM
+        html = <<~HTML
+          <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+            <body>
+              <noscript>
+                <p>
+                  <strong>Note:</strong> Since your browser does not support JavaScript,
+                  you must press the Continue button once to proceed.
+                </p>
+              </noscript>
+              <form action="#{GlobalSetting.saml_target_url}" method="post">
+                <div>
+                  <input type="hidden" name="SAMLRequest" value="#{@saml_req}"/>
+                </div>
+                <noscript>
+                  <div>
+                    <input type="submit" value="Continue"/>
+                  </div>
+                </noscript>
+              </form>
+              <script src="#{UrlHelper.absolute(script_path, GlobalSetting.cdn_url)}"></script>
+            </body>
+          </html>
+        HTML
+
+        render html: html.html_safe
       end
     end
 
