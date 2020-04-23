@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 describe SamlAuthenticator do
@@ -304,7 +306,7 @@ describe SamlAuthenticator do
       end
 
       it 'user should get lower trust level' do
-        @user.trust_level = 4;
+        @user.trust_level = 4
         hash = auth_hash(
           'trustLevel' => [1],
         )
@@ -314,7 +316,7 @@ describe SamlAuthenticator do
       end
 
       it 'invalid trust levels should not be used' do
-        @user.trust_level = 1;
+        @user.trust_level = 1
         hash = auth_hash(
           'trustLevel' => [15],
         )

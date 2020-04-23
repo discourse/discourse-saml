@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class SamlAuthenticator < ::Auth::OAuth2Authenticator
   attr_reader :user, :attributes, :info
 
@@ -283,7 +285,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     trust_level_attribute = GlobalSetting.try(:saml_trust_level_attribute) || 'trustLevel'
     level = attributes[trust_level_attribute].try(:first).to_i
 
-    return unless level.between?(1,4)
+    return unless level.between?(1, 4)
 
     if user.manual_locked_trust_level != level
       user.manual_locked_trust_level = level
@@ -299,7 +301,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     true # SAML plugin has no enabled setting
   end
 
-  def self.saml_base_url 
+  def self.saml_base_url
     GlobalSetting.try(:saml_base_url) || Discourse.base_url
   end
 

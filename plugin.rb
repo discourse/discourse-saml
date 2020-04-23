@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # name: discourse-saml
 # about: SAML Auth Provider
 # version: 0.1
@@ -108,7 +110,6 @@ after_initialize do
         if GlobalSetting.is_saml_forced_domain?(email)
           @auth_result.failed = true
           @auth_result.failed_reason = I18n.t("login.use_saml_auth")
-          return
         end
       end
 
