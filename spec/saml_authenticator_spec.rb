@@ -218,22 +218,22 @@ describe SamlAuthenticator do
 
         @groups[3].add @user
         @hash = auth_hash(
-          'memberOf' => group_names.slice(0, 2),
-          'groups_to_add' => [group_names.slice(2, 1).join(",")],
-          'groups_to_remove' => [group_names.slice(3, 1).join(",")],
+          'memberOf' => group_names[0..1],
+          'groups_to_add' => [group_names[2]],
+          'groups_to_remove' => [group_names[3]],
         )
       end
 
       it 'sync users to the given groups' do
         result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(0, 3).map(&:downcase))
+        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..2].map(&:downcase))
       end
 
       it 'sync users to the given groups within scope' do
-        GlobalSetting.stubs(:saml_sync_groups_list).returns(group_names.slice(1, 3).join("|"))
+        GlobalSetting.stubs(:saml_sync_groups_list).returns(group_names[1..3].join("|"))
 
         result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(1, 2).map(&:downcase))
+        expect(result.user.groups.pluck(:name)).to match_array(group_names[1..2].map(&:downcase))
       end
     end
 
@@ -246,7 +246,7 @@ describe SamlAuthenticator do
         @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
 
         @hash = auth_hash(
-          'memberOf' => group_names.slice(0, 2)
+          'memberOf' => group_names[0..1]
         )
       end
 
@@ -254,7 +254,7 @@ describe SamlAuthenticator do
         @groups[0].add @user
         @groups[3].add @user
         result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to eq(group_names.slice(0, 2).map(&:downcase))
+        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..1].map(&:downcase))
       end
     end
 
