@@ -250,6 +250,11 @@ describe SamlAuthenticator do
         )
       end
 
+      it 'full sync with a user who has no group membership currently' do
+        result = @authenticator.after_authenticate(@hash)
+        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..1].map(&:downcase))
+      end
+
       it 'sync users to the given groups' do
         @groups[0].add @user
         @groups[3].add @user
