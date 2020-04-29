@@ -212,8 +212,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     if groups_fullsync
       user_has_groups = user.groups.where(automatic: false).pluck(:name).map(&:downcase)
+      groups_to_add = user_group_list - user_has_groups
       if user_has_groups.present?
-        groups_to_add = user_group_list - user_has_groups
         groups_to_remove = user_has_groups - user_group_list
       end
     else
