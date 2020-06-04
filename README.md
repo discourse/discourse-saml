@@ -50,6 +50,8 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_SP_PRIVATE_KEY`: SAML Service Provider Private Key
 - `DISCOURSE_SAML_AUTHN_REQUESTS_SIGNED`: defaults to false
 - `DISCOURSE_SAML_WANT_ASSERTIONS_SIGNED`: defaults to false
+- `DISCOURSE_SAML_LOGOUT_REQUESTS_SIGNED`: defaults to false
+- `DISCOURSE_SAML_LOGOUT_RESPONSES_SIGNED`: defaults to false
 - `DISCOURSE_SAML_NAME_IDENTIFIER_FORMAT`: defaults to "urn:oasis:names:tc:SAML:2.0:protocol"
 - `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`: defaults to true
 - `DISCOURSE_SAML_VALIDATE_EMAIL_FIELDS`: defaults to blank. This setting accepts pipe separated group names that are supplied in `memberOf` attribute in SAML payload. If the group name specified in the value matches that from `memberOf` attribute than the `email_valid` is set to `true`, otherwise it defaults to `false`. This setting overrides `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`.
