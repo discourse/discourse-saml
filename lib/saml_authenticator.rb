@@ -101,12 +101,14 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       ::PluginStore.set("saml", "#{name}_last_auth_extra", extra_data.inspect)
     end
 
-    result.email = begin
-      if attributes.present?
-        email = attributes['email'].try(:first)
+    if GlobalSetting.try(:saml_email_from_attribute).present?
+      result.email = begin
+        if attributes.present?
+          email = attributes[GlobalSetting.try(:saml_email_from_attribute)].try(:first)
+        end
+        email ||= uid
+        email
       end
-      email ||= uid
-      email
     end
 
     result.username = begin
