@@ -109,6 +109,14 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       }
       log("#{name}_auth: #{data.inspect}")
     end
+    
+    result.email = begin
+      if attributes.present?
+        email = attributes['email'].try(:first)
+      end
+      email ||= uid
+      email
+    end
 
     result.username = begin
       if attributes.present?
