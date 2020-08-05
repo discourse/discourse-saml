@@ -101,15 +101,6 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       ::PluginStore.set("saml", "#{name}_last_auth_extra", extra_data.inspect)
     end
 
-    if GlobalSetting.try(:saml_debug_auth)
-      data = {
-        uid: uid,
-        info: info,
-        extra: extra_data
-      }
-      log("#{name}_auth: #{data.inspect}")
-    end
-    
     result.email = begin
       if attributes.present?
         email = attributes['email'].try(:first)
@@ -157,6 +148,16 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     result.extra_data[:saml_attributes] = attributes
     result.extra_data[:saml_info] = info
+    
+    if GlobalSetting.try(:saml_debug_auth)
+      data = {
+        uid: uid,
+        info: info,
+        extra: extra_data
+      }
+      log("#{name}_auth: #{data.inspect}")
+      log("#{name}_result: #{result.inspect}")
+    end
 
     if result.user.blank?
       result.username = '' if GlobalSetting.try(:saml_clear_username)
