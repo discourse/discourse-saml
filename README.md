@@ -65,6 +65,7 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_MODERATOR_ATTRIBUTE`: defaults to `isModerator`
 - `DISCOURSE_SAML_SYNC_TRUST_LEVEL`: defaults to false. If set to `true` user's trust level is set to the SAML attribute `trustLevel` (or attribute specified by `DISCOURSE_SAML_TRUST_LEVEL_ATTRIBUTE`) which needs to be between 1 and 4.
 - `DISCOURSE_SAML_TRUST_LEVEL_ATTRIBUTE`: defaults to `trustLevel`
+- `DISCOURSE_SAML_EMAIL_FROM_ATTRIBUTE`: defult to nil. If set with a string value, it will be used as the attribute name to search for to set the user email.
 
 
 ### Converting an RSA Key to a PEM
