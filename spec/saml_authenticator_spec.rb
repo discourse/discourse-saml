@@ -141,6 +141,52 @@ describe SamlAuthenticator do
       expect(result.user.id).to eq(Oauth2UserInfo.find_by(uid: @uid, provider: @authenticator.name).user_id)
     end
 
+    it 'override email based on custom attribute values' do
+      GlobalSetting.stubs(:saml_email_from_attribute).returns("overrideWithThisEmail")
+      GlobalSetting.stubs(:saml_auto_create_account).returns(true)
+
+      email = "jd@example.com"
+      anotherEmail = "john@doe.com"
+
+      hash = OmniAuth::AuthHash.new(
+        uid: "jd-uid",
+        info: {
+            name: "John Doe",
+            email: email
+        },
+        extra: {
+          raw_info: {
+            attributes: {
+              overrideWithThisEmail: anotherEmail.split(",")
+            }
+          }
+        }
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      expect(result.email).to eq(anotherEmail)
+      expect(result.user.email).to eq(anotherEmail)
+    end
+
+    it 'override email based on custom attribute values, fallback to standard field' do
+      GlobalSetting.stubs(:saml_email_from_attribute).returns("overrideWithThisEmail")
+      GlobalSetting.stubs(:saml_auto_create_account).returns(true)
+
+      email = "jd@example.com"
+
+      hash = OmniAuth::AuthHash.new(
+        uid: "jd-uid",
+        info: {
+            name: "John Doe",
+            email: email
+        }
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      expect(result.email).to eq(email)
+      expect(result.user.email).to eq(email)
+    end
+
     describe "username" do
       let(:name) { "John Doe" }
       let(:email) { "johndoe@example.com" }

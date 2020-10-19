@@ -106,7 +106,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
         if attributes.present?
           email = attributes[GlobalSetting.try(:saml_email_from_attribute)].try(:first)
         end
-        email ||= uid
+        email ||= result.email
         email
       end
     end
@@ -164,6 +164,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     if result.user.blank?
       result.username = '' if GlobalSetting.try(:saml_clear_username)
       result.omit_username = true if GlobalSetting.try(:saml_omit_username)
+      puts result.inspect
       result.user = auto_create_account(result) if GlobalSetting.try(:saml_auto_create_account) && result.email_valid
     else
       @user = result.user
