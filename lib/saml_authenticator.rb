@@ -58,6 +58,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
                       idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
                       idp_cert: setting(:cert),
+                      idp_cert_multi: setting(:cert_multi),
                       request_attributes: request_attributes,
                       attribute_statements: attribute_statements,
                       assertion_consumer_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/callback",
