@@ -213,13 +213,10 @@ if request_method == 'post'
   end
 end
 
-title = GlobalSetting.try(:saml_title) || "SAML"
+pretty_name = GlobalSetting.try(:saml_title) || "SAML"
 button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title) || "with SAML"
 
-auth_provider title: GlobalSetting.try(:saml_title) || button_title,
+auth_provider title: button_title, 
+              pretty_name: pretty_name,
               authenticator: SamlAuthenticator.new('saml'),
-              message: GlobalSetting.try(:saml_message) || "Authorizing with #{title} (make sure pop up blockers are not enabled)",
-              frame_width: GlobalSetting.try(:saml_frame_width) || 600,
-              frame_height: GlobalSetting.try(:saml_frame_height) || 400,
-              full_screen_login: GlobalSetting.try(:saml_full_screen_login) || false,
               custom_url: request_method == 'post' ? "/discourse_saml" : nil
