@@ -42,6 +42,7 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_SYNC_GROUPS`: Sync groups. Defaults to false.
 - `DISCOURSE_SAML_GROUPS_ATTRIBUTE`: SAML attribute to use for group sync. Defaults to `memberOf`
 - `DISCOURSE_SAML_GROUPS_FULLSYNC`: Should the assigned groups be completely synced including adding AND removing groups based on the IDP? Defaults to false. If set to true, `DISCOURSE_SAML_SYNC_GROUPS_LIST` and SAML attribute `groups_to_add`/`groups_to_remove` are not used.
+- `DISCOURSE_SAML_GROUPS_REMOVELDAP`: If your IdP transmits `cn=groupname,cn=groups,dc=example,dc=com` you can set this to true to use only `groupname`.
 - `DISCOURSE_SAML_SYNC_GROUPS_LIST`: Groups mentioned in this list are synced if they are referenced by the IDP (in `memberOf` SAML attribue). Any other groups will not be removed/updated.
 
 ### Other Supported settings
