@@ -251,7 +251,20 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       key = attr[:name]
       user.custom_fields["#{name}_#{key}"] = attr(key) if attr(key).present?
     end
+
+    sync_user_fields
     user.save_custom_fields
+  end
+
+  def sync_user_fields
+    statements = GlobalSetting.try(:saml_user_field_statements) || ""
+
+    statements.split("|").each do |statement|
+      key, field_id = statement.split(":")
+      next if key.blank? || field_id.blank?
+
+      user.custom_fields["user_field_#{field_id}"] = attr(key) if attr(key).present?
+    end
   end
 
   def sync_email(email, uid)

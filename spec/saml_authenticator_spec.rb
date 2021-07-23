@@ -111,6 +111,23 @@ describe SamlAuthenticator do
       end
     end
 
+    it 'syncs user fields based on `saml_user_field_statements` environment variable' do
+      GlobalSetting.stubs(:saml_user_field_statements).returns("department:2|title:3")
+
+      hash = auth_hash(
+        'department' => ["HR", "Manager"],
+        'title' => ["Senior HR Manager"]
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      attrs = hash.extra.raw_info.attributes
+
+      GlobalSetting.saml_user_field_statements.split("|").each do |statement|
+        key, id = statement.split(":")
+        expect(result.user.custom_fields["user_field_#{id}"]).to eq(attrs[key].join(","))
+      end
+    end
+
     it 'should get uid value from extra attributes param' do
       GlobalSetting.stubs(:saml_use_attributes_uid).returns("true")
 
