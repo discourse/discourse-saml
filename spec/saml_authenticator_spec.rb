@@ -128,6 +128,20 @@ describe SamlAuthenticator do
       end
     end
 
+    it 'syncs user locale' do
+      GlobalSetting.stubs(:saml_sync_locale).returns(true)
+      user_locale = "fr"
+
+      hash = auth_hash(
+        'locale' => [user_locale]
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      attrs = hash.extra.raw_info.attributes
+      
+      expect(result.user.locale).to eq(user_locale)
+    end
+
     it 'should get uid value from extra attributes param' do
       GlobalSetting.stubs(:saml_use_attributes_uid).returns("true")
 
