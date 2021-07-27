@@ -162,6 +162,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       sync_email(result.email, uid)
       sync_moderator
       sync_trust_level
+      sync_locale
     end
 
     result
@@ -182,6 +183,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     sync_moderator
     sync_trust_level
     sync_custom_fields
+    sync_locale
   end
 
   def auto_create_account(result)
@@ -311,6 +313,20 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     return if user.trust_level == level
 
     user.change_trust_level!(level, log_action_for: user)
+  end
+
+  def sync_locale
+    return unless GlobalSetting.try(:saml_sync_locale)
+
+    locale_attribute = GlobalSetting.try(:saml_locale_attribute) || 'locale'
+    locale = attributes[locale_attribute].try(:first)
+
+    return unless LocaleSiteSetting.valid_value?(locale)
+
+    if user.locale != locale
+      user.locale = locale
+      user.save
+    end
   end
 
   def enabled?
