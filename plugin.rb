@@ -12,7 +12,7 @@ require_dependency 'auth/oauth2_authenticator'
 
 gem 'macaddr', '1.0.0'
 gem 'uuid', '2.3.7'
-gem 'ruby-saml', '1.7.2'
+gem 'ruby-saml', '1.13.0'
 gem "omniauth-saml", '1.9.0'
 
 require_relative("lib/saml_authenticator")
