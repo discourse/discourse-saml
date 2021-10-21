@@ -215,6 +215,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     group_attribute = GlobalSetting.try(:saml_groups_attribute) || 'memberOf'
     user_group_list = (attributes[group_attribute] || []).map(&:downcase)
 
+    if GlobalSetting.try(:saml_groups_ldap_leafcn)
+      # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
+      user_group_list = user_group_list.map { |group| group.split(',').first.split('=').last }
+    end
+
     if groups_fullsync
       user_has_groups = user.groups.where(automatic: false).pluck(:name).map(&:downcase)
       groups_to_add = user_group_list - user_has_groups
