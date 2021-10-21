@@ -370,6 +370,43 @@ describe SamlAuthenticator do
       end
     end
 
+    describe "autoapprove" do
+      before do
+        GlobalSetting.stubs(:saml_auto_create_account).returns(true)
+        SiteSetting.stubs(:must_approve_users).returns(true)
+      end
+
+      it 'user should be approved automatically' do
+        GlobalSetting.stubs(:saml_autoapprove).returns(true)
+        name = "Jane Doe"
+        email = "janedoe@example.com"
+        hash = OmniAuth::AuthHash.new(
+          uid: @uid,
+          info: {
+              name: name,
+              email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.approved).to eq(true)
+      end
+
+      it 'user should not be approved automatically' do
+        GlobalSetting.stubs(:saml_autoapprove).returns(false)
+        name = "Johnny Doe"
+        email = "johnnydoe@example.com"
+        hash = OmniAuth::AuthHash.new(
+          uid: @uid,
+          info: {
+              name: name,
+              email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.approved).to eq(false)
+      end
+    end
+
     describe "set trust_level" do
       before do
         GlobalSetting.stubs(:saml_sync_trust_level).returns(true)

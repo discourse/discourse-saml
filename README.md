@@ -56,6 +56,7 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_NAME_IDENTIFIER_FORMAT`: defaults to "urn:oasis:names:tc:SAML:2.0:protocol"
 - `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`: defaults to true
 - `DISCOURSE_SAML_VALIDATE_EMAIL_FIELDS`: defaults to blank. This setting accepts pipe separated group names that are supplied in `memberOf` attribute in SAML payload. If the group name specified in the value matches that from `memberOf` attribute than the `email_valid` is set to `true`, otherwise it defaults to `false`. This setting overrides `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`.
+- `DISCOURSE_SAML_AUTOAPPROVE`: defaults to false. If set to `true` the user is approved automatically even if Discourse is configured to require approval of new users.
 - `DISCOURSE_SAML_BUTTON_TITLE`: 'with SAML'
 - `DISCOURSE_SAML_TITLE`: 'SAML'
 - `DISCOURSE_SAML_SYNC_MODERATOR`: defaults to false. If set to `true` user get moderator role if SAML attribute `isModerator` (or attribute specified by `DISCOURSE_SAML_MODERATOR_ATTRIBUTE`) is 1 or true.  

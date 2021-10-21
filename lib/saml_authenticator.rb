@@ -203,6 +203,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
         username: UserNameSuggester.suggest(try_username || try_name || email),
         active: true
       }
+      if GlobalSetting.try(:saml_autoapprove)
+        user_params["approved"] = true
+      end
 
       user = User.create!(user_params)
       after_create_account(user, result.as_json.with_indifferent_access)
