@@ -217,7 +217,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     if GlobalSetting.try(:saml_groups_ldap_leafcn)
       # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
-      user_group_list = user_group_list.map{|group| group.split(',').first.split('=').last}
+      user_group_list = user_group_list.map { |group| group.split(',').first.split('=').last }
     end
 
     if groups_fullsync
