@@ -347,6 +347,29 @@ describe SamlAuthenticator do
       end
     end
 
+    describe "set admin" do
+      before do
+        GlobalSetting.stubs(:saml_sync_admin).returns(true)
+      end
+
+      it 'user should be an admin (default param)' do
+        hash = auth_hash(
+          'isAdmin' => [1],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.admin).to eq(true)
+      end
+
+      it 'user should be an admin (using specified saml_admin_attribute)' do
+        GlobalSetting.stubs(:saml_admin_attribute).returns('is_an_admin')
+        hash = auth_hash(
+          'is_an_admin' => ['true'],
+        )
+        result = @authenticator.after_authenticate(hash)
+        expect(result.user.admin).to eq(true)
+      end
+    end
+
     describe "set trust_level" do
       before do
         GlobalSetting.stubs(:saml_sync_trust_level).returns(true)
