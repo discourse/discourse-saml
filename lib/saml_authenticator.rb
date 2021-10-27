@@ -161,6 +161,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       sync_custom_fields
       sync_email(result.email, uid)
       sync_moderator
+      sync_admin
       sync_trust_level
       sync_locale
     end
@@ -181,6 +182,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     sync_groups
     sync_moderator
+    sync_admin
     sync_trust_level
     sync_custom_fields
     sync_locale
@@ -299,6 +301,18 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     return if user.moderator == is_moderator
 
     user.moderator = is_moderator
+    user.save
+  end
+
+  def sync_admin
+    return unless GlobalSetting.try(:saml_sync_admin)
+
+    is_admin_attribute = GlobalSetting.try(:saml_admin_attribute) || 'isAdmin'
+    is_admin = ['1', 'true'].include?(attributes[is_admin_attribute].try(:first).to_s.downcase)
+
+    return if user.admin == is_admin
+
+    user.admin = is_admin
     user.save
   end
 
