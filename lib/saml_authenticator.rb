@@ -117,8 +117,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
         username = attributes['uid'].try(:first) if GlobalSetting.try(:saml_use_uid)
       end
 
-      username ||= UserNameSuggester.suggest(result.name) if result.name != uid
-      username ||= UserNameSuggester.suggest(result.email) if result.email != uid
+      username ||= begin
+        source = nil
+        source ||= result.name if result.name != uid
+        source ||= result.email if result.email != uid
+        UserNameSuggester.suggest(source) if source
+      end
+
       username ||= uid
       username
     end
