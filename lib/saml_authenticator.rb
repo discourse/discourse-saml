@@ -70,7 +70,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
                       security: {
                         authn_requests_signed: !!GlobalSetting.try(:saml_authn_requests_signed),
                         want_assertions_signed: !!GlobalSetting.try(:saml_want_assertions_signed),
-                        logout_requests_signed: !!GlobalSetting.try(:saml_logout_requests_signed),                                                                                                                 
+                        logout_requests_signed: !!GlobalSetting.try(:saml_logout_requests_signed),
                         logout_responses_signed: !!GlobalSetting.try(:saml_logout_responses_signed),
                         signature_method: XMLSecurity::Document::RSA_SHA1
                       },

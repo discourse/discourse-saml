@@ -211,7 +211,7 @@ end
 pretty_name = GlobalSetting.try(:saml_title) || "SAML"
 button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title) || "with SAML"
 
-auth_provider title: button_title, 
+auth_provider title: button_title,
               pretty_name: pretty_name,
               authenticator: SamlAuthenticator.new('saml'),
               custom_url: request_method == 'post' ? "/discourse_saml" : nil
