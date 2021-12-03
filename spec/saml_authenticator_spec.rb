@@ -138,7 +138,7 @@ describe SamlAuthenticator do
 
       result = @authenticator.after_authenticate(hash)
       attrs = hash.extra.raw_info.attributes
-      
+
       expect(result.user.locale).to eq(user_locale)
     end
 
