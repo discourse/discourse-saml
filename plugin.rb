@@ -16,15 +16,12 @@ gem "omniauth-saml", '1.9.0'
 
 require_relative "lib/saml_authenticator"
 
-after_initialize do
-  if GlobalSetting.try(:saml_slo_target_url).present?
-    SiteSetting.class_eval do
-      def self.logout_redirect
-        SamlAuthenticator.saml_base_url + "/auth/saml/spslo"
-      end
-    end
-  end
+on(:before_session_destroy) do |data|
+  next if !GlobalSetting.try(:saml_slo_target_url).present?
+  data[:redirect_url] = Discourse.base_path + "/auth/saml/spslo"
+end
 
+after_initialize do
   if GlobalSetting.try(:saml_forced_domains).present?
 
     GlobalSetting.class_eval do
