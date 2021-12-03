@@ -6,8 +6,6 @@
 # author: Robin Ward
 # url: https://github.com/discourse/discourse-saml
 
-register_asset 'stylesheets/saml.scss'
-
 require_dependency 'auth/oauth2_authenticator'
 
 gem 'macaddr', '1.0.0'
@@ -16,13 +14,9 @@ gem 'rexml', '3.2.5'
 gem 'ruby-saml', '1.13.0'
 gem "omniauth-saml", '1.9.0'
 
-require_relative("lib/saml_authenticator")
+require_relative "lib/saml_authenticator"
 
 after_initialize do
-  [
-    '../app/jobs/onceoff/migrate_saml_user_infos.rb'
-  ].each { |path| load File.expand_path(path, __FILE__) }
-
   if GlobalSetting.try(:saml_slo_target_url).present?
     SiteSetting.class_eval do
       def self.logout_redirect
