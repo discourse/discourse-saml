@@ -21,101 +21,49 @@ on(:before_session_destroy) do |data|
   data[:redirect_url] = Discourse.base_path + "/auth/saml/spslo"
 end
 
+module ::DiscourseSaml
+  def self.is_saml_forced_domain?(email)
+    return if !GlobalSetting.try(:saml_forced_domains).present?
+    return if email.blank?
+
+    GlobalSetting.saml_forced_domains.split(",").each do |domain|
+      return true if email.end_with?("@#{domain}")
+    end
+
+    false
+  end
+end
+
 after_initialize do
-  if GlobalSetting.try(:saml_forced_domains).present?
-
-    GlobalSetting.class_eval do
-
-      def self.is_saml_forced_domain?(email)
-        return if email.blank?
-
-        GlobalSetting.saml_forced_domains.split(",").each do |domain|
-          return true if email.end_with?("@#{domain}")
-        end
-
-        false
-      end
+  # "SAML Forced Domains" - Prevent login via email
+  on(:before_email_login) do |user|
+    if ::DiscourseSaml.is_saml_forced_domain?(user.email)
+      raise Discourse::InvalidAccess.new(nil, nil, custom_message: "login.use_saml_auth")
     end
+  end
 
-    UsersController.class_eval do
-      alias_method :discourse_email_login, :email_login
-
-      def email_login
-        raise Discourse::NotFound if !SiteSetting.enable_local_logins_via_email
-        return redirect_to path("/") if current_user
-
-        expires_now
-        params.require(:login)
-
-        user = User.human_users.find_by_username_or_email(params[:login])
-        user_presence = user.present? && !user.staged
-
-        if user_presence && GlobalSetting.is_saml_forced_domain?(user.email)
-          render_json_error(I18n.t("login.use_saml_auth"))
-          return
-        end
-
-        discourse_email_login
+  # "SAML Forced Domains" - Prevent login via regular username/password
+  module ::DiscourseSaml::SessionControllerExtensions
+    def login_error_check(user)
+      if ::DiscourseSaml.is_saml_forced_domain?(user.email)
+        return { error: I18n.t("login.use_saml_auth") }
       end
+      super
     end
+  end
+  ::SessionController.prepend(::DiscourseSaml::SessionControllerExtensions)
 
-    SessionController.class_eval do
-      alias_method :discourse_create, :create
-
-      def create
-        params.require(:login)
-        login = params[:login].strip
-        login = login[1..-1] if login[0] == "@"
-        user = User.find_by_username_or_email(login)
-
-        if user && GlobalSetting.is_saml_forced_domain?(user.email)
-          render json: { error: I18n.t("login.use_saml_auth") }
-          return
-        end
-
-        discourse_create
-      end
+  # "SAML Forced Dvomains" - Prevent login via other omniauth strategies
+  class ::DiscourseSaml::ForcedSamlError < StandardError; end
+  on(:after_auth) do |authenticator, result|
+    next if authenticator.name == "saml"
+    if [result.user&.email, result.email].any? { |e| ::DiscourseSaml.is_saml_forced_domain?(e) }
+      raise ::DiscourseSaml::ForcedSamlError
     end
-
-    Users::OmniauthCallbacksController.class_eval do
-      before_action :check_email_domain, only: [:complete]
-
-      def check_email_domain
-        auth = request.env["omniauth.auth"]
-        raise Discourse::NotFound unless request.env["omniauth.auth"]
-
-        auth[:session] = session
-
-        return if params[:provider] == "saml"
-
-        authenticator = self.class.find_authenticator(params[:provider])
-        provider = DiscoursePluginRegistry.auth_providers.find { |p| p.name == params[:provider] }
-
-        if authenticator.can_connect_existing_user? && current_user
-          @auth_result = authenticator.after_authenticate(auth, existing_account: current_user)
-        else
-          @auth_result = authenticator.after_authenticate(auth)
-        end
-
-        email = @auth_result.user&.email || @auth_result.email
-
-        if GlobalSetting.is_saml_forced_domain?(email)
-          @auth_result.failed = true
-          @auth_result.failed_reason = I18n.t("login.use_saml_auth")
-        end
-      end
-
-      alias_method :discourses_complete, :complete
-
-      def complete
-        if @auth_result&.failed?
-          flash[:error] = @auth_result.failed_reason.html_safe
-          return render('failure')
-        end
-
-        discourses_complete
-      end
-    end
+  end
+  Users::OmniauthCallbacksController.rescue_from(::DiscourseSaml::ForcedSamlError) do
+    flash[:error] = I18n.t("login.use_saml_auth")
+    render('failure')
   end
 end
 
