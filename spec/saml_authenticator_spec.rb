@@ -221,6 +221,42 @@ describe SamlAuthenticator do
       end
     end
 
+    describe "name" do
+      let(:name) { "John Doe" }
+      let(:first_name) { "Jane" }
+      let(:last_name) { "Smith" }
+      let(:email) { "johndoe@example.com" }
+      let(:screen_name) { "johndoe" }
+      let(:hash) { OmniAuth::AuthHash.new(
+          uid: @uid,
+          info: {
+              name: name,
+              email: email,
+              first_name: first_name,
+              last_name: last_name,
+              nickname: screen_name
+          },
+          extra: {
+            raw_info: {
+              attributes: {
+              }
+            }
+          }
+        )
+      }
+
+      it "should be populated from the fullName by default" do
+        result = @authenticator.after_authenticate(hash)
+        expect(result.name).to eq(name)
+      end
+
+      it "should fall back to firstname_lastname" do
+        hash.info.delete(:name)
+        result = @authenticator.after_authenticate(hash)
+        expect(result.name).to eq("#{first_name} #{last_name}")
+      end
+    end
+
     describe "sync_email" do
       let(:new_email) { "johndoe@demo.com" }
 
