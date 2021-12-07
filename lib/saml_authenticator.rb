@@ -33,7 +33,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
   def attribute_statements
     result = {}
-    statements = "name:name|email:email,mail|first_name:first_name,firstname,firstName|last_name:last_name,lastname,lastName|nickname:screenName"
+    statements = "name:fullName,name|email:email,mail|first_name:first_name,firstname,firstName|last_name:last_name,lastname,lastName|nickname:screenName"
     custom_statements = GlobalSetting.try(:saml_attribute_statements)
 
     statements = "#{statements}|#{custom_statements}" if custom_statements.present?
@@ -129,11 +129,8 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
 
     result.name = begin
-      if attributes.present?
-        fullname = attributes['fullName'].try(:first)
-        fullname = "#{attributes['firstName'].try(:first)} #{attributes['lastName'].try(:first)}"
-      end
-      fullname ||= result.name
+      fullname = auth.info[:name].presence # From fullName, name, or other custom attribute_statement
+      fullname ||= "#{auth.info[:first_name]} #{auth.info[:last_name]}"
       fullname
     end
 
