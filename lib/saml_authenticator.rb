@@ -51,30 +51,38 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def register_middleware(omniauth)
     omniauth.provider :saml,
                       name: name,
-                      issuer: SamlAuthenticator.saml_base_url,
-                      idp_sso_target_url: setting(:target_url),
-                      idp_slo_target_url: setting(:slo_target_url),
-                      slo_default_relay_state: SamlAuthenticator.saml_base_url,
-                      idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
-                      idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
-                      idp_cert: setting(:cert),
-                      idp_cert_multi: setting(:cert_multi),
-                      request_attributes: request_attributes,
-                      attribute_statements: attribute_statements,
-                      assertion_consumer_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/callback",
-                      single_logout_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/slo",
-                      name_identifier_format: GlobalSetting.try(:saml_name_identifier_format),
-                      custom_url: (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
-                      certificate: GlobalSetting.try(:saml_sp_certificate),
-                      private_key: GlobalSetting.try(:saml_sp_private_key),
-                      security: {
-                        authn_requests_signed: !!GlobalSetting.try(:saml_authn_requests_signed),
-                        want_assertions_signed: !!GlobalSetting.try(:saml_want_assertions_signed),
-                        logout_requests_signed: !!GlobalSetting.try(:saml_logout_requests_signed),
-                        logout_responses_signed: !!GlobalSetting.try(:saml_logout_responses_signed),
-                        signature_method: XMLSecurity::Document::RSA_SHA1
-                      },
-                      idp_slo_session_destroy: proc { |env, session| @user.user_auth_tokens.destroy_all; @user.logged_out }
+                      setup: lambda { |env|
+                        setup_strategy(env["omniauth.strategy"])
+                      }
+  end
+
+  def setup_strategy(strategy)
+    strategy.options.deep_merge!(
+      issuer: SamlAuthenticator.saml_base_url,
+      idp_sso_target_url: setting(:target_url),
+      idp_slo_target_url: setting(:slo_target_url),
+      slo_default_relay_state: SamlAuthenticator.saml_base_url,
+      idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
+      idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
+      idp_cert: setting(:cert),
+      idp_cert_multi: setting(:cert_multi),
+      request_attributes: request_attributes,
+      attribute_statements: attribute_statements,
+      assertion_consumer_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/callback",
+      single_logout_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/slo",
+      name_identifier_format: GlobalSetting.try(:saml_name_identifier_format),
+      custom_url: (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
+      certificate: GlobalSetting.try(:saml_sp_certificate),
+      private_key: GlobalSetting.try(:saml_sp_private_key),
+      security: {
+        authn_requests_signed: !!GlobalSetting.try(:saml_authn_requests_signed),
+        want_assertions_signed: !!GlobalSetting.try(:saml_want_assertions_signed),
+        logout_requests_signed: !!GlobalSetting.try(:saml_logout_requests_signed),
+        logout_responses_signed: !!GlobalSetting.try(:saml_logout_responses_signed),
+        signature_method: XMLSecurity::Document::RSA_SHA1
+      },
+      idp_slo_session_destroy: proc { |env, session| @user.user_auth_tokens.destroy_all; @user.logged_out }
+    )
   end
 
   def attr(key)
