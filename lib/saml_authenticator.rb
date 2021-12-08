@@ -49,7 +49,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def register_middleware(omniauth)
-    omniauth.provider :saml,
+    omniauth.provider ::DiscourseSaml::SamlOmniauthStrategy,
                       name: name,
                       setup: lambda { |env|
                         setup_strategy(env["omniauth.strategy"])
@@ -71,7 +71,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       assertion_consumer_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/callback",
       single_logout_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/slo",
       name_identifier_format: GlobalSetting.try(:saml_name_identifier_format),
-      custom_url: (GlobalSetting.try(:saml_request_method) == 'post') ? "/discourse_saml" : nil,
+      request_method: (GlobalSetting.try(:saml_request_method)&.downcase == 'post') ? "POST" : "GET",
       certificate: GlobalSetting.try(:saml_sp_certificate),
       private_key: GlobalSetting.try(:saml_sp_private_key),
       security: {
