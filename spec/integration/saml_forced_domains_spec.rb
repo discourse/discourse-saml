@@ -19,7 +19,10 @@ describe "SAML Forced Domains" do
     ).tap { |u| u.activate }
   end
 
-  before { OmniAuth.config.test_mode = true }
+  before do
+    OmniAuth.config.test_mode = true
+    global_setting :saml_target_url, "https://example.com/samltarget"
+  end
 
   describe "username/password login" do
     it "works as normal when feature disabled" do
