@@ -68,9 +68,11 @@ end
 require_relative "lib/discourse_saml/saml_omniauth_strategy"
 require_relative "lib/saml_authenticator"
 
-pretty_name = GlobalSetting.try(:saml_title) || "SAML"
-button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title) || "with SAML"
+# Allow GlobalSettings to override the translations
+# If the global settings are not provided, will use the `js.login.saml.name` and `js.login.saml.title` translations
+name = GlobalSetting.try(:saml_title)
+button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title)
 
 auth_provider title: button_title,
-              pretty_name: pretty_name,
+              pretty_name: name,
               authenticator: SamlAuthenticator.new('saml')
