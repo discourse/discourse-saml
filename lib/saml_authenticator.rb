@@ -17,12 +17,16 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def setting(key)
-    GlobalSetting.try("#{name}_#{key}") || GlobalSetting.try("saml_#{key.to_s}")
+    # In almost all circumstances, `name` is `saml`.
+    # However, some other plugins choose to re-use this Authenticator class
+    # with a different `name`. This helper lets them have their own settings,
+    # which automatically fall back to the `saml_` defaults.
+    ::DiscourseSaml.setting(key, prefer_prefix: "#{name}_")
   end
 
   def request_attributes
     attrs = "email|name|first_name|last_name"
-    custom_attrs = GlobalSetting.try(:saml_request_attributes)
+    custom_attrs = setting(:request_attributes)
 
     attrs = "#{attrs}|#{custom_attrs}" if custom_attrs.present?
 
@@ -34,7 +38,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def attribute_statements
     result = {}
     statements = "name:fullName,name|email:email,mail|first_name:first_name,firstname,firstName|last_name:last_name,lastname,lastName|nickname:screenName"
-    custom_statements = GlobalSetting.try(:saml_attribute_statements)
+    custom_statements = setting(:attribute_statements)
 
     statements = "#{statements}|#{custom_statements}" if custom_statements.present?
 
@@ -62,23 +66,23 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       idp_sso_target_url: setting(:target_url),
       idp_slo_target_url: setting(:slo_target_url),
       slo_default_relay_state: SamlAuthenticator.saml_base_url,
-      idp_cert_fingerprint: GlobalSetting.try(:saml_cert_fingerprint),
-      idp_cert_fingerprint_algorithm: GlobalSetting.try(:saml_cert_fingerprint_algorithm),
+      idp_cert_fingerprint: setting(:cert_fingerprint),
+      idp_cert_fingerprint_algorithm: setting(:cert_fingerprint_algorithm),
       idp_cert: setting(:cert),
       idp_cert_multi: setting(:cert_multi),
       request_attributes: request_attributes,
       attribute_statements: attribute_statements,
       assertion_consumer_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/callback",
       single_logout_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/slo",
-      name_identifier_format: GlobalSetting.try(:saml_name_identifier_format),
-      request_method: (GlobalSetting.try(:saml_request_method)&.downcase == 'post') ? "POST" : "GET",
-      certificate: GlobalSetting.try(:saml_sp_certificate),
-      private_key: GlobalSetting.try(:saml_sp_private_key),
+      name_identifier_format: setting(:name_identifier_format),
+      request_method: (setting(:request_method)&.downcase == 'post') ? "POST" : "GET",
+      certificate: setting(:sp_certificate),
+      private_key: setting(:sp_private_key),
       security: {
-        authn_requests_signed: !!GlobalSetting.try(:saml_authn_requests_signed),
-        want_assertions_signed: !!GlobalSetting.try(:saml_want_assertions_signed),
-        logout_requests_signed: !!GlobalSetting.try(:saml_logout_requests_signed),
-        logout_responses_signed: !!GlobalSetting.try(:saml_logout_responses_signed),
+        authn_requests_signed: !!setting(:authn_requests_signed),
+        want_assertions_signed: !!setting(:want_assertions_signed),
+        logout_requests_signed: !!setting(:logout_requests_signed),
+        logout_responses_signed: !!setting(:logout_responses_signed),
         signature_method: XMLSecurity::Document::RSA_SHA1
       },
       idp_slo_session_destroy: proc { |env, session| @user.user_auth_tokens.destroy_all; @user.logged_out }
@@ -96,7 +100,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     raw_info = extra_data[:raw_info]
     @attributes = raw_info&.attributes || {}
 
-    auth[:uid] = attributes['uid'].try(:first) || auth[:uid] if GlobalSetting.try(:saml_use_attributes_uid)
+    auth[:uid] = attributes['uid'].try(:first) || auth[:uid] if setting(:use_attributes_uid)
     uid = auth[:uid]
 
     auth[:provider] = name
@@ -104,13 +108,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     result = super
 
-    if GlobalSetting.try(:saml_log_auth)
+    if setting(:log_auth)
       ::PluginStore.set("saml", "#{name}_last_auth", auth.inspect)
       ::PluginStore.set("saml", "#{name}_last_auth_raw_info", raw_info.inspect)
       ::PluginStore.set("saml", "#{name}_last_auth_extra", extra_data.inspect)
     end
 
-    if GlobalSetting.try(:saml_debug_auth)
+    if setting(:debug_auth)
       data = {
         uid: uid,
         info: info,
@@ -122,7 +126,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     result.username = begin
       if attributes.present?
         username = attributes['screenName'].try(:first)
-        username = attributes['uid'].try(:first) if GlobalSetting.try(:saml_use_uid)
+        username = attributes['uid'].try(:first) if setting(:use_uid)
       end
 
       username ||= begin
@@ -142,18 +146,18 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       fullname
     end
 
-    if result.respond_to?(:skip_email_validation) && GlobalSetting.try(:saml_skip_email_validation)
+    if result.respond_to?(:skip_email_validation) && setting(:skip_email_validation)
       result.skip_email_validation = true
     end
 
-    if GlobalSetting.try(:saml_validate_email_fields).present? && attributes['memberOf'].present?
-      unless (GlobalSetting.try(:saml_validate_email_fields).split("|").map(&:downcase) & attributes['memberOf'].map(&:downcase)).empty?
+    if setting(:validate_email_fields).present? && attributes['memberOf'].present?
+      unless (setting(:validate_email_fields).split("|").map(&:downcase) & attributes['memberOf'].map(&:downcase)).empty?
         result.email_valid = true
       else
         result.email_valid = false
       end
-    elsif GlobalSetting.respond_to?(:saml_default_emails_valid) && !GlobalSetting.saml_default_emails_valid.nil?
-      result.email_valid = GlobalSetting.saml_default_emails_valid
+    elsif !setting(:default_emails_valid).nil?
+      result.email_valid = setting(:default_emails_valid)
     else
       result.email_valid = true
     end
@@ -162,9 +166,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     result.extra_data[:saml_info] = info
 
     if result.user.blank?
-      result.username = '' if GlobalSetting.try(:saml_clear_username)
-      result.omit_username = true if GlobalSetting.try(:saml_omit_username)
-      result.user = auto_create_account(result) if GlobalSetting.try(:saml_auto_create_account) && result.email_valid
+      result.username = '' if setting(:clear_username)
+      result.omit_username = true if setting(:omit_username)
+      result.user = auto_create_account(result) if setting(:auto_create_account) && result.email_valid
     else
       @user = result.user
       sync_groups
@@ -180,7 +184,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def log(info)
-    Rails.logger.warn("SAML Debugging: #{info}") if GlobalSetting.try(:saml_debug_auth)
+    Rails.logger.warn("SAML Debugging: #{info}") if setting(:debug_auth)
   end
 
   def after_create_account(user, auth)
@@ -222,12 +226,12 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_groups
-    return unless GlobalSetting.try(:saml_sync_groups)
-    groups_fullsync = GlobalSetting.try(:saml_groups_fullsync) || false
-    group_attribute = GlobalSetting.try(:saml_groups_attribute) || 'memberOf'
+    return unless setting(:sync_groups).present?
+    groups_fullsync = setting(:groups_fullsync) || false
+    group_attribute = setting(:groups_attribute).presence || 'memberOf'
     user_group_list = (attributes[group_attribute] || []).map(&:downcase)
 
-    if GlobalSetting.try(:saml_groups_ldap_leafcn)
+    if setting(:groups_ldap_leafcn).present?
       # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
       user_group_list = user_group_list.map { |group| group.split(',').first.split('=').last }
     end
@@ -239,7 +243,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
         groups_to_remove = user_has_groups - user_group_list
       end
     else
-      total_group_list = (GlobalSetting.try(:saml_sync_groups_list) || "").split('|').map(&:downcase)
+      total_group_list = (setting(:sync_groups_list) || "").split('|').map(&:downcase)
       groups_to_add = user_group_list + attr('groups_to_add').split(",").map(&:downcase)
       groups_to_remove = attr('groups_to_remove').split(",").map(&:downcase)
 
@@ -276,7 +280,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_user_fields
-    statements = GlobalSetting.try(:saml_user_field_statements) || ""
+    statements = setting(:user_field_statements) || ""
 
     statements.split("|").each do |statement|
       key, field_id = statement.split(":")
@@ -287,7 +291,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_email(email, uid)
-    return unless GlobalSetting.try(:saml_sync_email)
+    return unless setting(:sync_email)
 
     email = Email.downcase(email)
 
@@ -303,9 +307,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_moderator
-    return unless GlobalSetting.try(:saml_sync_moderator)
+    return unless setting(:sync_moderator)
 
-    is_moderator_attribute = GlobalSetting.try(:saml_moderator_attribute) || 'isModerator'
+    is_moderator_attribute = setting(:moderator_attribute) || 'isModerator'
     is_moderator = ['1', 'true'].include?(attributes[is_moderator_attribute].try(:first).to_s.downcase)
 
     return if user.moderator == is_moderator
@@ -315,9 +319,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_admin
-    return unless GlobalSetting.try(:saml_sync_admin)
+    return unless setting(:sync_admin)
 
-    is_admin_attribute = GlobalSetting.try(:saml_admin_attribute) || 'isAdmin'
+    is_admin_attribute = setting(:admin_attribute) || 'isAdmin'
     is_admin = ['1', 'true'].include?(attributes[is_admin_attribute].try(:first).to_s.downcase)
 
     return if user.admin == is_admin
@@ -327,9 +331,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_trust_level
-    return unless GlobalSetting.try(:saml_sync_trust_level)
+    return unless setting(:sync_trust_level)
 
-    trust_level_attribute = GlobalSetting.try(:saml_trust_level_attribute) || 'trustLevel'
+    trust_level_attribute = setting(:trust_level_attribute) || 'trustLevel'
     level = attributes[trust_level_attribute].try(:first).to_i
 
     return unless level.between?(1, 4)
@@ -345,9 +349,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def sync_locale
-    return unless GlobalSetting.try(:saml_sync_locale)
+    return unless setting(:sync_locale)
 
-    locale_attribute = GlobalSetting.try(:saml_locale_attribute) || 'locale'
+    locale_attribute = setting(:locale_attribute) || 'locale'
     locale = attributes[locale_attribute].try(:first)
 
     return unless LocaleSiteSetting.valid_value?(locale)
@@ -359,11 +363,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def enabled?
-    true # SAML plugin has no enabled setting
+    # Checking target_url global setting for backwards compatibility
+    # (the plugin used to be enabled-by-default)
+    setting(:enabled) || !!GlobalSetting.try("#{name}_target_url")
   end
 
   def self.saml_base_url
-    GlobalSetting.try(:saml_base_url) || Discourse.base_url
+    DiscourseSaml.setting(:saml_base_url) || Discourse.base_url
   end
 
 end
