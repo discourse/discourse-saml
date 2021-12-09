@@ -52,6 +52,15 @@ module ::DiscourseSaml
 end
 
 after_initialize do
+  if !!GlobalSetting.try("#{name}_target_url")
+    # Configured via environment variables. Hide all the site settings
+    # from the UI to avoid confusion
+    SiteSetting.defaults.all.keys.each do |k|
+      next if !k.to_s.start_with?("saml_")
+      SiteSetting.hidden_settings << k
+    end
+  end
+
   # "SAML Forced Domains" - Prevent login via email
   on(:before_email_login) do |user|
     if ::DiscourseSaml.is_saml_forced_domain?(user.email)
