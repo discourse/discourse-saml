@@ -196,13 +196,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     return if User.find_by_email(try_email).present?
 
     # Use a mutex here to counter SAML responses that are sent at the same time and the same email payload
-    DistributedMutex.synchronize("discourse_saml_#{email}") do
+    DistributedMutex.synchronize("discourse_saml_#{try_email}") do
       try_name = result.name.presence
       try_username = result.username.presence
 
       user_params = {
-        primary_email: UserEmail.new(email: email, primary: true),
-        name: try_name || User.suggest_name(try_username || email),
+        primary_email: UserEmail.new(email: try_email, primary: true),
+        name: try_name || User.suggest_name(try_username || try_email),
         username: UserNameSuggester.suggest(try_username || try_name || try_email || uid),
         active: true
       }

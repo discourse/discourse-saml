@@ -180,7 +180,8 @@ describe SamlAuthenticator do
           uid: @uid,
           info: {
               name: name,
-              email: email
+              email: email,
+              nickname: screen_name,
           },
           extra: {
             raw_info: {
@@ -200,24 +201,9 @@ describe SamlAuthenticator do
         expect(result.username).to eq(@uid.to_s)
       end
 
-      it 'should be equal to screenName' do
+      it 'should be equal to nickname, which omniauth-saml calculated from screenName' do
         result = @authenticator.after_authenticate(hash)
         expect(result.username).to eq(screen_name)
-      end
-
-      it 'should be populated from name' do
-        hash.extra = nil
-
-        result = @authenticator.after_authenticate(hash)
-        expect(result.username).to eq(name.sub(" ", "_"))
-      end
-
-      it 'should be populated from email' do
-        hash.extra = nil
-        hash.info.name = nil
-
-        result = @authenticator.after_authenticate(hash)
-        expect(result.username).to eq(email.split("@")[0])
       end
     end
 
