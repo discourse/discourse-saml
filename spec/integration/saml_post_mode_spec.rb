@@ -4,19 +4,20 @@ require 'rails_helper'
 
 describe "SAML POST-mode functionality", type: :request do
   before do
+    SiteSetting.saml_enabled = true
     OmniAuth.config.test_mode = false
-    global_setting :saml_target_url, "https://example.com/samlidp"
+    SiteSetting.saml_target_url = "https://example.com/samlidp"
   end
 
   it "does not affect functionality when disabled" do
-    global_setting :saml_request_method, "GET"
+    SiteSetting.saml_request_method = "GET"
     post "/auth/saml"
     expect(response.status).to eq(302)
     expect(response.location).to start_with("https://example.com/samlidp")
   end
 
   it "serves an auto-submitting POST form when enabled" do
-    global_setting :saml_request_method, "POST"
+    SiteSetting.saml_request_method = "POST"
     post "/auth/saml"
     expect(response.status).to eq(200)
     expect(response.body).to have_tag(
