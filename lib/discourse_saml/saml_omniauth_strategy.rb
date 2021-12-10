@@ -21,6 +21,8 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
 
   def callback_phase
     if request.request_method.downcase.to_sym == :post && !request.params["SameSite"] && request.params["SAMLResponse"]
+      env[Rack::RACK_SESSION_OPTIONS][:skip] = true # Do not set any session cookies. They'll override our SameSite ones
+
       # Make browser re-issue the request in a same-site context so we get cookies
       # For this particular action, we explicitely **want** cross-site requests to include session cookies
       render_auto_submitted_form(

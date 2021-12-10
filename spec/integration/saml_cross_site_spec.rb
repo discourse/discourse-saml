@@ -38,6 +38,8 @@ describe "SAML cross-site with same-site cookie", type: :request do
     )
 
     expect(response.body).to have_tag("script")
+
+    expect(response.has_header?("Set-Cookie")).to eq(false)
   end
 
   it "continues once the samesite form has been submitted" do
