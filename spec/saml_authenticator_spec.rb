@@ -494,4 +494,15 @@ describe SamlAuthenticator do
       end
     end
   end
+
+  describe ".base_url" do
+    it "works" do
+      expect(SamlAuthenticator.saml_base_url).to eq("http://test.localhost")
+    end
+
+    it "can be overriden by a setting" do
+      SiteSetting.saml_base_url = "https://override.example.com"
+      expect(SamlAuthenticator.saml_base_url).to eq("https://override.example.com")
+    end
+  end
 end
