@@ -369,7 +369,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   end
 
   def self.saml_base_url
-    DiscourseSaml.setting(:base_url) || Discourse.base_url
+    DiscourseSaml.setting(:base_url).presence || Discourse.base_url
   end
 
 end
