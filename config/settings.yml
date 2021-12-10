@@ -1,0 +1,89 @@
+saml:
+  saml_enabled: false
+
+  saml_target_url: ""
+  saml_slo_target_url: ""
+
+  saml_name_identifier_format: ""
+
+  saml_cert:
+    default: ""
+    textarea: true
+  saml_cert_fingerprint: ""
+  saml_cert_fingerprint_algorithm:
+    type: enum
+    default: SHA1
+    choices:
+      - SHA1
+      - SHA256
+      - SHA384
+      - SHA512
+  saml_cert_multi:
+    default: ""
+    textarea: true
+
+  saml_request_method:
+    type: enum
+    default: GET
+    choices:
+      - GET
+      - POST
+  saml_sp_certificate:
+    default: ""
+    textarea: true
+  saml_sp_private_key:
+    default: ""
+    textarea: true
+  saml_authn_requests_signed: false
+  saml_want_assertions_signed: false
+  saml_logout_requests_signed: false
+  saml_logout_responses_signed: false
+
+  saml_request_attributes:
+    type: list
+    default: ""
+  saml_attribute_statements:
+    type: list
+    default: ""
+  saml_use_attributes_uid: false
+
+  saml_skip_email_validation: false
+  saml_validate_email_fields:
+    type: list
+    default: ""
+  saml_default_emails_valid: true
+
+  saml_clear_username: false
+  saml_omit_username: false
+  saml_auto_create_account: false
+
+  saml_sync_groups: false
+  saml_groups_fullsync: false
+  saml_groups_attribute: 'memberOf'
+  saml_groups_ldap_leafcn: false
+  saml_sync_groups_list:
+    type: list
+    default: ""
+
+  saml_user_field_statements:
+    type: list
+    default: ""
+
+  saml_sync_email: false
+  
+  saml_sync_moderator: false
+  saml_moderator_attribute: "isModerator"
+  saml_sync_admin: false
+  saml_admin_attribute: "isAdmin"
+  saml_sync_trust_level: false
+  saml_trust_level_attribute: "trustLevel"
+  saml_sync_locale: false
+  saml_locale_attribute: 'locale'
+
+  saml_forced_domains:
+    type: list
+    default: ""
+
+  saml_log_auth: false
+  saml_debug_auth: false
+  saml_base_url: ""

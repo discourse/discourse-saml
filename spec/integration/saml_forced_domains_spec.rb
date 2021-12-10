@@ -20,8 +20,9 @@ describe "SAML Forced Domains" do
   end
 
   before do
+    SiteSetting.saml_enabled = true
     OmniAuth.config.test_mode = true
-    global_setting :saml_target_url, "https://example.com/samltarget"
+    SiteSetting.saml_target_url = "https://example.com/samltarget"
   end
 
   describe "username/password login" do
@@ -34,7 +35,7 @@ describe "SAML Forced Domains" do
     end
 
     it "blocks logins for blocked domains" do
-      global_setting :saml_forced_domains, "samlonly.example.com"
+      SiteSetting.saml_forced_domains = "samlonly.example.com"
       post "/session.json", params: {
         login: saml_user.username, password: password
       }
@@ -62,14 +63,14 @@ describe "SAML Forced Domains" do
     end
 
     it "blocks login for blocked domains" do
-      global_setting :saml_forced_domains, "samlonly.example.com"
+      SiteSetting.saml_forced_domains = "samlonly.example.com"
       post "/u/email-login.json", params: { login: saml_user.email }
       expect(response.status).to eq(403)
       expect_not_enqueued_with(job: :critical_user_email)
     end
 
     it "allows login for other domains" do
-      global_setting :saml_forced_domains, "samlonly.example.com"
+      SiteSetting.saml_forced_domains = "samlonly.example.com"
       post "/u/email-login.json", params: { login: other_user.email }
       expect(response.status).to eq(200)
       expect_job_enqueued(job: :critical_user_email, args: {
@@ -103,7 +104,7 @@ describe "SAML Forced Domains" do
     end
 
     it "blocks login for blocked domains" do
-      global_setting :saml_forced_domains, "samlonly.example.com"
+      SiteSetting.saml_forced_domains = "samlonly.example.com"
       get "/auth/google_oauth2/callback"
       expect(response.status).to eq(200)
       expect(response.body).to include(I18n.t("login.use_saml_auth"))
@@ -111,14 +112,14 @@ describe "SAML Forced Domains" do
     end
 
     it "allows SAML login for blocked domains" do
-      global_setting :saml_forced_domains, "samlonly.example.com"
+      SiteSetting.saml_forced_domains = "samlonly.example.com"
       get "/auth/saml/callback"
       expect(response.status).to eq(302)
       expect(session[:current_user_id]).to eq(saml_user.id)
     end
 
     it "allows login for other domains" do
-      global_setting :saml_forced_domains, "samlonly.example.com"
+      SiteSetting.saml_forced_domains = "samlonly.example.com"
       mock_auth.info.email = other_user.email
       get "/auth/google_oauth2/callback"
       expect(response.status).to eq(302)

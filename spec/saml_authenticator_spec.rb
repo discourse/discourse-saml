@@ -70,7 +70,7 @@ describe SamlAuthenticator do
     end
 
     it 'defaults email_valid to false if saml_default_emails_valid is false' do
-      GlobalSetting.stubs(:saml_default_emails_valid).returns(false)
+      SiteSetting.saml_default_emails_valid = false
 
       hash = OmniAuth::AuthHash.new(
         uid: @uid,
@@ -86,7 +86,7 @@ describe SamlAuthenticator do
     end
 
     it 'defaults email_valid based on saml_validate_email_fields setting' do
-      GlobalSetting.stubs(:saml_validate_email_fields).returns("customers")
+      SiteSetting.saml_validate_email_fields = "customers"
 
       hash = auth_hash(
         'memberOf' => %w(Customers Employees)
@@ -98,7 +98,7 @@ describe SamlAuthenticator do
     end
 
     it 'stores additional request attributes to user custom fields' do
-      GlobalSetting.stubs(:saml_request_attributes).returns("department|title")
+      SiteSetting.saml_request_attributes = "department|title"
 
       hash = auth_hash(
         'department' => ["HR", "Manager"],
@@ -106,13 +106,13 @@ describe SamlAuthenticator do
       )
 
       result = @authenticator.after_authenticate(hash)
-      GlobalSetting.saml_request_attributes.split("|").each do |name|
+      SiteSetting.saml_request_attributes.split("|").each do |name|
         expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.attributes[name].join(","))
       end
     end
 
     it 'syncs user fields based on `saml_user_field_statements` environment variable' do
-      GlobalSetting.stubs(:saml_user_field_statements).returns("department:2|title:3")
+      SiteSetting.saml_user_field_statements = "department:2|title:3"
 
       hash = auth_hash(
         'department' => ["HR", "Manager"],
@@ -122,14 +122,14 @@ describe SamlAuthenticator do
       result = @authenticator.after_authenticate(hash)
       attrs = hash.extra.raw_info.attributes
 
-      GlobalSetting.saml_user_field_statements.split("|").each do |statement|
+      SiteSetting.saml_user_field_statements.split("|").each do |statement|
         key, id = statement.split(":")
         expect(result.user.custom_fields["user_field_#{id}"]).to eq(attrs[key].join(","))
       end
     end
 
     it 'syncs user locale' do
-      GlobalSetting.stubs(:saml_sync_locale).returns(true)
+      SiteSetting.saml_sync_locale = true
       user_locale = "fr"
 
       hash = auth_hash(
@@ -143,7 +143,7 @@ describe SamlAuthenticator do
     end
 
     it 'should get uid value from extra attributes param' do
-      GlobalSetting.stubs(:saml_use_attributes_uid).returns("true")
+      SiteSetting.saml_use_attributes_uid = true
 
       hash = auth_hash('uid' => ["789"])
 
@@ -152,7 +152,7 @@ describe SamlAuthenticator do
     end
 
     it 'creates new account automatically' do
-      GlobalSetting.stubs(:saml_auto_create_account).returns(true)
+      SiteSetting.saml_auto_create_account = true
       name = "John Doe"
       email = "johndoe@example.com"
 
@@ -194,7 +194,7 @@ describe SamlAuthenticator do
       }
 
       it 'should be equal to uid' do
-        GlobalSetting.stubs(:saml_use_uid).returns(true)
+        SiteSetting.saml_use_attributes_uid = true
 
         result = @authenticator.after_authenticate(hash)
         expect(result.username).to eq(@uid.to_s)
@@ -261,7 +261,7 @@ describe SamlAuthenticator do
       let(:new_email) { "johndoe@demo.com" }
 
       before do
-        GlobalSetting.stubs(:saml_sync_email).returns(true)
+        SiteSetting.saml_sync_email = true
         @hash = auth_hash({})
         @hash.info.email = new_email
       end
@@ -280,7 +280,7 @@ describe SamlAuthenticator do
       let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
 
       before do
-        GlobalSetting.stubs(:saml_sync_groups).returns(true)
+        SiteSetting.saml_sync_groups = true
         @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
 
         @groups[3].add @user
@@ -297,7 +297,7 @@ describe SamlAuthenticator do
       end
 
       it 'sync users to the given groups within scope' do
-        GlobalSetting.stubs(:saml_sync_groups_list).returns(group_names[1..3].join("|"))
+        SiteSetting.saml_sync_groups_list = group_names[1..3].join("|")
 
         result = @authenticator.after_authenticate(@hash)
         expect(result.user.groups.pluck(:name)).to match_array(group_names[1..2].map(&:downcase))
@@ -309,8 +309,8 @@ describe SamlAuthenticator do
       let(:group_names_ldap) { ["cn=group_1,cn=groups,dc=example,dc=com", "cn=Group_2,cn=groups,dc=example,dc=com", "cn=GROUP_3,cn=groups,dc=example,dc=com", "cn=group_4,cn=groups,dc=example,dc=com"] }
 
       before do
-        GlobalSetting.stubs(:saml_sync_groups).returns(true)
-        GlobalSetting.stubs(:saml_groups_ldap_leafcn).returns(true)
+        SiteSetting.saml_sync_groups = true
+        SiteSetting.saml_groups_ldap_leafcn = true
         @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
 
         @groups[3].add @user
@@ -327,7 +327,7 @@ describe SamlAuthenticator do
       end
 
       it 'sync users to the given groups within scope' do
-        GlobalSetting.stubs(:saml_sync_groups_list).returns(group_names[1..3].join("|"))
+        SiteSetting.saml_sync_groups_list = group_names[1..3].join("|")
 
         result = @authenticator.after_authenticate(@hash)
         expect(result.user.groups.pluck(:name)).to match_array(group_names[1..2].map(&:downcase))
@@ -338,8 +338,8 @@ describe SamlAuthenticator do
       let(:group_names) { ["group_1", "Group_2", "GROUP_3", "group_4"] }
 
       before do
-        GlobalSetting.stubs(:saml_sync_groups).returns(true)
-        GlobalSetting.stubs(:saml_groups_fullsync).returns(true)
+        SiteSetting.saml_sync_groups = true
+        SiteSetting.saml_groups_fullsync = true
         @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
 
         @hash = auth_hash(
@@ -362,7 +362,7 @@ describe SamlAuthenticator do
 
     describe "set moderator" do
       before do
-        GlobalSetting.stubs(:saml_sync_moderator).returns(true)
+        SiteSetting.saml_sync_moderator = true
       end
 
       it 'user should be a moderator (default param)' do
@@ -374,7 +374,7 @@ describe SamlAuthenticator do
       end
 
       it 'user should be a moderator (using specified saml_moderator_attribute)' do
-        GlobalSetting.stubs(:saml_moderator_attribute).returns('is_a_moderator')
+        SiteSetting.saml_moderator_attribute = 'is_a_moderator'
         hash = auth_hash(
           'is_a_moderator' => ['true'],
         )
@@ -385,7 +385,7 @@ describe SamlAuthenticator do
 
     describe "set admin" do
       before do
-        GlobalSetting.stubs(:saml_sync_admin).returns(true)
+        SiteSetting.saml_sync_admin = true
       end
 
       it 'user should be an admin (default param)' do
@@ -397,7 +397,7 @@ describe SamlAuthenticator do
       end
 
       it 'user should be an admin (using specified saml_admin_attribute)' do
-        GlobalSetting.stubs(:saml_admin_attribute).returns('is_an_admin')
+        SiteSetting.saml_admin_attribute = 'is_an_admin'
         hash = auth_hash(
           'is_an_admin' => ['true'],
         )
@@ -408,7 +408,7 @@ describe SamlAuthenticator do
 
     describe "set trust_level" do
       before do
-        GlobalSetting.stubs(:saml_sync_trust_level).returns(true)
+        SiteSetting.saml_sync_trust_level = true
       end
 
       it 'user should have trust level 3 (default param)' do
@@ -421,7 +421,7 @@ describe SamlAuthenticator do
       end
 
       it 'user should have trust level 3 (using specified saml_trust_level_attribute)' do
-        GlobalSetting.stubs(:saml_trust_level_attribute).returns('my_trust_level')
+        SiteSetting.saml_trust_level_attribute = 'my_trust_level'
         hash = auth_hash(
           'my_trust_level' => ['3'],
         )
@@ -454,25 +454,25 @@ describe SamlAuthenticator do
       it "matches request_attributes count" do
         expect(@authenticator.request_attributes.count).to eq(4)
 
-        GlobalSetting.stubs(:saml_request_attributes).returns("company_name|mobile_number|name")
+        SiteSetting.saml_request_attributes = "company_name|mobile_number|name"
         expect(@authenticator.request_attributes.count).to eq(6)
       end
 
       it "matches attribute_statements count" do
         expect(@authenticator.attribute_statements.count).to eq(5)
 
-        GlobalSetting.stubs(:saml_attribute_statements).returns("email:emailAddress|company|name")
+        SiteSetting.saml_attribute_statements = "email:emailAddress|company|name"
         expect(@authenticator.attribute_statements.count).to eq(5)
         expect(@authenticator.attribute_statements["email"]).to eq(["email", "mail", "emailAddress"])
 
-        GlobalSetting.stubs(:saml_attribute_statements).returns("company_name:company,business|phone:mobile,contact_no")
+        SiteSetting.saml_attribute_statements = "company_name:company,business|phone:mobile,contact_no"
         expect(@authenticator.attribute_statements.count).to eq(7)
       end
     end
 
     context 'after_create_account' do
       it 'adds to group' do
-        GlobalSetting.stubs(:saml_sync_groups).returns(true)
+        SiteSetting.saml_sync_groups = true
         authenticator = SamlAuthenticator.new("saml", trusted: true)
         user = Fabricate(:user, email: 'realgoogleuser@gmail.com')
         group = Fabricate(:group)

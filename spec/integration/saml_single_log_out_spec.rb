@@ -4,6 +4,7 @@ require 'rails_helper'
 
 describe "SAML Single Log Out" do
   let(:user) { Fabricate(:user) }
+  before { SiteSetting.saml_enabled = true }
 
   it "does nothing when SLO is not configured" do
     sign_in(user)
@@ -13,7 +14,7 @@ describe "SAML Single Log Out" do
   end
 
   it "redirects to the omniauth route when SLO is configured" do
-    global_setting :saml_slo_target_url, "https://example.com/slo-target"
+    SiteSetting.saml_slo_target_url = "https://example.com/slo-target"
 
     sign_in(user)
     delete "/session/#{user.username}", xhr: true

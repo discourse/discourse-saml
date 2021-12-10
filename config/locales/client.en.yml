@@ -4,3 +4,8 @@ en:
       saml:
         name: "SAML"
         title: with SAML
+  admin_js:
+    admin:
+      site_settings:
+        categories: 
+          saml: SAML

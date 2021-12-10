@@ -14,25 +14,36 @@ gem 'rexml', '3.2.5'
 gem 'ruby-saml', '1.13.0'
 gem "omniauth-saml", '1.9.0'
 
+if !GlobalSetting.try("saml_target_url")
+  enabled_site_setting :saml_enabled
+end
+
 on(:before_session_destroy) do |data|
   next if !DiscourseSaml.setting(:slo_target_url).present?
   data[:redirect_url] = Discourse.base_path + "/auth/saml/spslo"
 end
 
 module ::DiscourseSaml
+  def self.enabled?
+    # Legacy - we only check the enabled site setting
+    # if the environment-variables are **not** present
+    !!GlobalSetting.try("saml_target_url") || SiteSetting.saml_enabled
+  end
+
   def self.setting(key, prefer_prefix: "saml_")
-    if prefer_prefix == "saml_" && SiteSetting.has_setting?("saml_#{key}")
+    if prefer_prefix == "saml_"
       SiteSetting.get("saml_#{key}")
     else
-      GlobalSetting.try("#{prefer_prefix}#{key}") || GlobalSetting.try("saml_#{key}")
+      GlobalSetting.try("#{prefer_prefix}#{key}") || SiteSetting.get("saml_#{key}")
     end
   end
 
   def self.is_saml_forced_domain?(email)
+    return if !enabled?
     return if !DiscourseSaml.setting(:forced_domains).present?
     return if email.blank?
 
-    DiscourseSaml.setting(:forced_domains).split(",").each do |domain|
+    DiscourseSaml.setting(:forced_domains).split(/[,|]/).each do |domain|
       return true if email.end_with?("@#{domain}")
     end
 
