@@ -123,21 +123,10 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       log("#{name}_auth: #{data.inspect}")
     end
 
-    result.username = begin
-      if attributes.present?
-        username = attributes['screenName'].try(:first)
-        username = attributes['uid'].try(:first) if setting(:use_attributes_uid)
-      end
-
-      username ||= begin
-        source = nil
-        source ||= result.name if result.name != uid
-        source ||= result.email if result.email != uid
-        UserNameSuggester.suggest(source) if source
-      end
-
-      username ||= uid
-      username
+    result.username = if uid && setting(:use_attributes_uid)
+      uid
+    else
+      auth.info.nickname
     end
 
     result.name = begin
@@ -168,7 +157,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     if result.user.blank?
       result.username = '' if setting(:clear_username)
       result.omit_username = true if setting(:omit_username)
-      result.user = auto_create_account(result) if setting(:auto_create_account) && result.email_valid
+      result.user = auto_create_account(result, uid) if setting(:auto_create_account) && result.email_valid
     else
       @user = result.user
       sync_groups
@@ -202,9 +191,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     sync_locale
   end
 
-  def auto_create_account(result)
-    email = result.email
-    return if User.find_by_email(email).present?
+  def auto_create_account(result, uid)
+    try_email = result.email.presence
+    return if User.find_by_email(try_email).present?
 
     # Use a mutex here to counter SAML responses that are sent at the same time and the same email payload
     DistributedMutex.synchronize("discourse_saml_#{email}") do
@@ -214,7 +203,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       user_params = {
         primary_email: UserEmail.new(email: email, primary: true),
         name: try_name || User.suggest_name(try_username || email),
-        username: UserNameSuggester.suggest(try_username || try_name || email),
+        username: UserNameSuggester.suggest(try_username || try_name || try_email || uid),
         active: true
       }
 
