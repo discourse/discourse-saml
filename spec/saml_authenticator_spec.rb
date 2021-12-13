@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 describe SamlAuthenticator do
-  Fabricator(:oauth2_user_info) do
+  Fabricator(:saml_user_info, class_name: :oauth2_user_info) do
     provider "saml"
     user
   end
@@ -42,7 +42,7 @@ describe SamlAuthenticator do
     end
 
     it 'finds user by uid' do
-      Fabricate(:oauth2_user_info, uid: @uid, user: @user)
+      Fabricate(:saml_user_info, uid: @uid, user: @user)
 
       hash = OmniAuth::AuthHash.new(
         uid: @uid,
@@ -58,7 +58,7 @@ describe SamlAuthenticator do
     end
 
     it 'finds user by email in uid' do
-      Fabricate(:oauth2_user_info, uid: @uid, user: @user)
+      Fabricate(:saml_user_info, uid: @uid, user: @user)
 
       hash = OmniAuth::AuthHash.new(
         uid: @user.email,
@@ -253,7 +253,7 @@ describe SamlAuthenticator do
       end
 
       it 'update email in user and oauth2_user_info models' do
-        oauth2_user_info = Fabricate(:oauth2_user_info, uid: @uid, user: @user)
+        oauth2_user_info = Fabricate(:saml_user_info, uid: @uid, user: @user)
 
         result = @authenticator.after_authenticate(@hash)
         expect(result.user.email).to eq(new_email)
