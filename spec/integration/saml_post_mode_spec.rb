@@ -20,6 +20,7 @@ describe "SAML POST-mode functionality", type: :request do
     SiteSetting.saml_request_method = "POST"
     post "/auth/saml"
     expect(response.status).to eq(200)
+    expect(response.headers["content-type"]).to eq("text/html")
     expect(response.body).to have_tag(
       "form",
       with: {
