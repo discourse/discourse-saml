@@ -6,6 +6,7 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
   def request_phase
     if options[:request_method] == "POST"
       with_settings do |settings|
+        settings.compress_request = false # Compression used by default for Redirect binding, not POST
         authn_request = OneLogin::RubySaml::Authrequest.new
         params = authn_request.create_params(settings, additional_params_for_authn_request)
         destination = settings.idp_sso_service_url
