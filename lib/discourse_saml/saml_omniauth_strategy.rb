@@ -73,8 +73,7 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
       </html>
     HTML
 
-    r = Rack::Response.new
-    r.write(html)
+    r = Rack::Response.new(html, 200, { 'content-type' => 'text/html' })
     r.finish
   end
 end
