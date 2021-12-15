@@ -37,6 +37,45 @@ describe "SAML POST-mode functionality", type: :request do
       }
     )
 
-    expect(response.body).to have_tag("script")
+    html = Nokogiri::HTML5(response.body)
+    script_url = html.at("script").attribute("src").value
+
+    csp = response.headers["content-security-policy"]
+    script_src = csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
+    included_in_csp = script_src.any? { |allowed_src| script_url.start_with?(allowed_src) }
+
+    expect(included_in_csp).to eq(true)
+  end
+
+  it "works for subfolder" do
+    set_subfolder "/forum"
+    SiteSetting.saml_request_method = "POST"
+
+    post "/auth/saml"
+    expect(response.status).to eq(200)
+    expect(response.body).to have_tag(
+      "form",
+      with: {
+        "action" => "https://example.com/samlidp",
+        "method" => "post",
+      }
+    )
+
+    expect(response.body).to have_tag(
+      "form input",
+      with: {
+        "name" => "SAMLRequest",
+        "type" => "hidden",
+      }
+    )
+
+    html = Nokogiri::HTML5(response.body)
+    script_url = html.at("script").attribute("src").value
+
+    csp = response.headers["content-security-policy"]
+    script_src = csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
+    included_in_csp = script_src.any? { |allowed_src| script_url.start_with?(allowed_src) }
+
+    expect(included_in_csp).to eq(true)
   end
 end

@@ -41,7 +41,7 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
   private
 
   def render_auto_submitted_form(destination:, params:)
-    submit_script_url = UrlHelper.absolute('/plugins/discourse-saml/javascripts/submit-form-on-load.js', GlobalSetting.cdn_url)
+    submit_script_url = UrlHelper.absolute("#{Discourse.base_path}/plugins/discourse-saml/javascripts/submit-form-on-load.js", GlobalSetting.cdn_url)
 
     inputs = params.map do |key, value|
       <<~HTML
