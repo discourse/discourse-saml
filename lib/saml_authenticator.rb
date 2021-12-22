@@ -203,7 +203,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       user_params = {
         primary_email: UserEmail.new(email: try_email, primary: true),
         name: try_name || User.suggest_name(try_username || try_email),
-        username: UserNameSuggester.suggest(*[try_username, try_name, try_email, uid]),
+        username: UserNameSuggester.suggest(try_username, try_name, try_email, uid),
         active: true
       }
 
