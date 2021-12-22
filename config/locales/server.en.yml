@@ -43,7 +43,7 @@ en:
 
     saml_user_field_statements: If provided, user fields will be set based on SAML attributes. Each entry should be in the format `saml_attribute_name:discourse_field_id`
 
-    saml_sync_email: Update the user email on every SAML login
+    saml_sync_email: On every login, override the user's email using the SAML value. Works the same as the `auth_overrides_email` setting, but is specific to SAML logins.
 
     saml_sync_moderator: Sync moderator status from SAML result?
     saml_moderator_attribute: The SAML attribute which contains the moderator boolean
