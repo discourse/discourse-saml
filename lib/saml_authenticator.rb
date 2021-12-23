@@ -156,18 +156,19 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     if result.user.blank?
       result.username = '' if setting(:clear_username)
-      result.omit_username = true if setting(:omit_username)
       result.user = auto_create_account(result, uid) if setting(:auto_create_account) && result.email_valid
     else
       @user = result.user
       sync_groups
       sync_custom_fields
-      sync_email(result.email, uid)
       sync_moderator
       sync_admin
       sync_trust_level
       sync_locale
     end
+
+    result.overrides_username = setting(:omit_username)
+    result.overrides_email = setting(:sync_email)
 
     result
   end
@@ -276,22 +277,6 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       next if key.blank? || field_id.blank?
 
       user.custom_fields["user_field_#{field_id}"] = attr(key) if attr(key).present?
-    end
-  end
-
-  def sync_email(email, uid)
-    return unless setting(:sync_email)
-
-    email = Email.downcase(email)
-
-    return if user.email == email
-
-    existing_user = User.find_by_email(email)
-    if email =~ EmailValidator.email_regex && existing_user.nil?
-      user.email = email
-      user.save
-
-      user.oauth2_user_infos.where(provider: name, uid: uid).update_all(email: email)
     end
   end
 
