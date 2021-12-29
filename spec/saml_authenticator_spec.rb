@@ -107,7 +107,7 @@ describe SamlAuthenticator do
 
       result = @authenticator.after_authenticate(hash)
       SiteSetting.saml_request_attributes.split("|").each do |name|
-        expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.attributes[name].join(","))
+        expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.multi(name).join(","))
       end
     end
 
@@ -120,11 +120,11 @@ describe SamlAuthenticator do
       )
 
       result = @authenticator.after_authenticate(hash)
-      attrs = hash.extra.raw_info.attributes
+      attrs = hash.extra.raw_info
 
       SiteSetting.saml_user_field_statements.split("|").each do |statement|
         key, id = statement.split(":")
-        expect(result.user.custom_fields["user_field_#{id}"]).to eq(attrs[key].join(","))
+        expect(result.user.custom_fields["user_field_#{id}"]).to eq(attrs.multi(key).join(","))
       end
     end
 
@@ -184,12 +184,10 @@ describe SamlAuthenticator do
               nickname: screen_name,
           },
           extra: {
-            raw_info: {
-              attributes: {
-                uid: @uid.to_s.split(","),
-                screenName: screen_name.split(",")
-              }
-            }
+            raw_info: OneLogin::RubySaml::Attributes.new(
+                uid: [@uid.to_s.split(",")],
+                screenName: [screen_name.split(",")]
+            )
           }
         )
       }
@@ -443,20 +441,21 @@ describe SamlAuthenticator do
         authenticator = SamlAuthenticator.new("saml", trusted: true)
         user = Fabricate(:user, email: 'realgoogleuser@gmail.com')
         group = Fabricate(:group)
-        session = {
-          extra_data: {
-            uid: "123456",
-            provider: "saml",
-            saml_info: {
-              groups_to_add: group.name
-            },
-            saml_attributes: {
-              name: "John Doe",
-              email: user.email
-            }
+
+        result = Auth::Result.new
+        result.user = user
+        result.extra_data = {
+          uid: "123456",
+          provider: "saml",
+          saml_info: {
+            "groups_to_add" => group.name
+          },
+          saml_attributes: {
+            "name" => ["John Doe"],
+            "email" => [user.email],
           }
         }
-        authenticator.after_create_account(user, session)
+        authenticator.after_create_account(user, result)
         expect(user.groups.find(group.id).present?).to eq(true)
       end
     end
