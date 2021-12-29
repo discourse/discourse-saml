@@ -172,6 +172,27 @@ describe SamlAuthenticator do
       expect(result.user.id).to eq(Oauth2UserInfo.find_by(uid: @uid, provider: @authenticator.name).user_id)
     end
 
+    it 'ignores invalid input when automatically creating new account' do
+      SiteSetting.saml_auto_create_account = true
+      SiteSetting.unicode_usernames = false
+
+      nickname = "άκυρος"
+      name = "άκυρος"
+      email = "johndoe@example.com"
+
+      hash = OmniAuth::AuthHash.new(
+        uid: @uid,
+        info: {
+          name: name,
+          nickname: nickname,
+          email: email
+        }
+      )
+
+      result = @authenticator.after_authenticate(hash)
+      expect(result.user.username).to eq("johndoe")
+    end
+
     describe "username" do
       let(:name) { "John Doe" }
       let(:email) { "johndoe@example.com" }
