@@ -8,7 +8,7 @@ describe "SAML Overrides Email", type: :request do
   fab!(:new_email) { "new@example.com" }
   fab!(:new_username) { "newusername" }
   fab!(:user) { Fabricate(:user, email: initial_email, username: initial_username) }
-  fab!(:uac) { Oauth2UserInfo.create!(user: user, provider: "saml", uid: "12345") }
+  fab!(:uac) { UserAssociatedAccount.create!(user: user, provider_name: "saml", provider_uid: "12345") }
 
   before do
     SiteSetting.saml_enabled = true

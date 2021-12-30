@@ -2,11 +2,9 @@
 
 # name: discourse-saml
 # about: SAML Auth Provider
-# version: 0.1
-# author: Robin Ward
+# version: 1.0
+# author: Discourse Team
 # url: https://github.com/discourse/discourse-saml
-
-require_dependency 'auth/oauth2_authenticator'
 
 gem 'macaddr', '1.0.0'
 gem 'uuid', '2.3.7'
@@ -103,4 +101,4 @@ button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_
 
 auth_provider title: button_title,
               pretty_name: name,
-              authenticator: SamlAuthenticator.new('saml')
+              authenticator: SamlAuthenticator.new

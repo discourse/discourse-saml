@@ -38,7 +38,7 @@ describe "SAML staged user handling", type: :request do
     }
     expect(response.status).to eq(200)
 
-    expect(Oauth2UserInfo.where(user: staged).count).to eq(1)
+    expect(UserAssociatedAccount.where(user: staged).count).to eq(1)
     expect(staged.reload.staged).to eq(false)
 
     expect(session[:current_user_id]).to eq(staged.id)
