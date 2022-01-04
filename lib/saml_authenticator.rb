@@ -1,12 +1,6 @@
 # frozen_string_literal: true
 
 class SamlAuthenticator < ::Auth::OAuth2Authenticator
-  attr_reader :user, :attributes, :info
-
-  def info=(info)
-    @info = info.present? ? info.with_indifferent_access : info
-  end
-
   def initialize(name, opts = {})
     opts[:trusted] ||= true
     super(name, opts)
@@ -43,7 +37,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     statements = "#{statements}|#{custom_statements}" if custom_statements.present?
 
     statements.split("|").map do |statement|
-      attrs = statement.split(":")
+      attrs = statement.split(":", 2)
       next if attrs.count != 2
       (result[attrs[0]] ||= []) << attrs[1].split(",")
       result[attrs[0]].flatten!
@@ -85,22 +79,23 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
         logout_responses_signed: !!setting(:logout_responses_signed),
         signature_method: XMLSecurity::Document::RSA_SHA1
       },
-      idp_slo_session_destroy: proc { |env, session| @user.user_auth_tokens.destroy_all; @user.logged_out }
+      idp_slo_session_destroy: proc do |env, session|
+        user = CurrentUser.lookup_from_env(env)
+        if user
+          user.user_auth_tokens.destroy_all
+          user.logged_out
+        end
+      end
     )
   end
 
-  def attr(key)
-    info[key] || attributes[key]&.join(",") || ""
-  end
-
   def after_authenticate(auth)
-    self.info = auth[:info]
+    info = auth[:info]
 
     extra_data = auth.extra || {}
-    raw_info = extra_data[:raw_info]
-    @attributes = raw_info&.attributes || {}
+    attributes = extra_data[:raw_info] || OneLogin::RubySaml::Attributes.new
 
-    auth[:uid] = attributes['uid'].try(:first) || auth[:uid] if setting(:use_attributes_uid)
+    auth[:uid] = attributes.single('uid') || auth[:uid] if setting(:use_attributes_uid)
     uid = auth[:uid]
 
     auth[:provider] = name
@@ -110,7 +105,7 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
 
     if setting(:log_auth)
       ::PluginStore.set("saml", "#{name}_last_auth", auth.inspect)
-      ::PluginStore.set("saml", "#{name}_last_auth_raw_info", raw_info.inspect)
+      ::PluginStore.set("saml", "#{name}_last_auth_raw_info", attributes.inspect)
       ::PluginStore.set("saml", "#{name}_last_auth_extra", extra_data.inspect)
     end
 
@@ -118,13 +113,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       data = {
         uid: uid,
         info: info,
-        extra: extra_data
+        attributes: attributes
       }
       log("#{name}_auth: #{data.inspect}")
     end
 
     result.username = if uid && setting(:use_attributes_uid)
-      uid
+      uid.to_s
     else
       auth.info.nickname
     end
@@ -135,36 +130,37 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       fullname
     end
 
-    if result.respond_to?(:skip_email_validation) && setting(:skip_email_validation)
+    if setting(:skip_email_validation)
       result.skip_email_validation = true
     end
 
-    if setting(:validate_email_fields).present? && attributes['memberOf'].present?
-      unless (setting(:validate_email_fields).split("|").map(&:downcase) & attributes['memberOf'].map(&:downcase)).empty?
+    group_attribute = setting(:groups_attribute)
+    if setting(:validate_email_fields).present? && attributes.multi(group_attribute).present?
+      validate_email_fields = setting(:validate_email_fields).split("|").map(&:downcase)
+      member_of = attributes.multi(group_attribute).map { |g| g.downcase.split(',') }.flatten
+      if (validate_email_fields & member_of).present?
         result.email_valid = true
       else
         result.email_valid = false
       end
-    elsif !setting(:default_emails_valid).nil?
-      result.email_valid = setting(:default_emails_valid)
     else
-      result.email_valid = true
+      result.email_valid = setting(:default_emails_valid)
     end
 
-    result.extra_data[:saml_attributes] = attributes
+    result.extra_data[:saml_attributes] = attributes.attributes
     result.extra_data[:saml_info] = info
 
     if result.user.blank?
       result.username = '' if setting(:clear_username)
       result.user = auto_create_account(result, uid) if setting(:auto_create_account) && result.email_valid
     else
-      @user = result.user
-      sync_groups
-      sync_custom_fields
-      sync_moderator
-      sync_admin
-      sync_trust_level
-      sync_locale
+      user = result.user
+      sync_groups(user, attributes, info)
+      sync_custom_fields(user, attributes, info)
+      sync_moderator(user, attributes)
+      sync_admin(user, attributes)
+      sync_trust_level(user, attributes)
+      sync_locale(user, attributes)
     end
 
     result.overrides_username = setting(:omit_username)
@@ -180,16 +176,15 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def after_create_account(user, auth)
     super
 
-    @user = user
-    self.info = auth[:extra_data][:saml_info]
-    @attributes = auth[:extra_data][:saml_attributes]
+    info = auth[:extra_data][:saml_info]
+    attributes = OneLogin::RubySaml::Attributes.new(auth[:extra_data][:saml_attributes])
 
-    sync_groups
-    sync_moderator
-    sync_admin
-    sync_trust_level
-    sync_custom_fields
-    sync_locale
+    sync_groups(user, attributes, info)
+    sync_moderator(user, attributes)
+    sync_admin(user, attributes)
+    sync_trust_level(user, attributes)
+    sync_custom_fields(user, attributes, info)
+    sync_locale(user, attributes)
   end
 
   def auto_create_account(result, uid)
@@ -209,21 +204,26 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       }
 
       user = User.create!(user_params)
-      after_create_account(user, result.as_json.with_indifferent_access)
+
+      session_data = result.session_data
+      after_create_result = Auth::Result.from_session_data(session_data, user: user)
+
+      after_create_account(user, after_create_result)
 
       user
     end
   end
 
-  def sync_groups
+  def sync_groups(user, attributes, info)
     return unless setting(:sync_groups).present?
-    groups_fullsync = setting(:groups_fullsync) || false
-    group_attribute = setting(:groups_attribute).presence || 'memberOf'
-    user_group_list = (attributes[group_attribute] || []).map(&:downcase)
+
+    groups_fullsync = setting(:groups_fullsync)
+    raw_group_list = attributes.multi(setting(:groups_attribute)) || []
+    user_group_list = raw_group_list.map { |g| g.downcase.split(',') }.flatten
 
     if setting(:groups_ldap_leafcn).present?
       # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
-      user_group_list = user_group_list.map { |group| group.split(',').first.split('=').last }
+      user_group_list = user_group_list.map { |group| group.split('=', 2).last }
     end
 
     if groups_fullsync
@@ -233,9 +233,14 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
         groups_to_remove = user_has_groups - user_group_list
       end
     else
-      total_group_list = (setting(:sync_groups_list) || "").split('|').map(&:downcase)
-      groups_to_add = user_group_list + attr('groups_to_add').split(",").map(&:downcase)
-      groups_to_remove = attr('groups_to_remove').split(",").map(&:downcase)
+      total_group_list = setting(:sync_groups_list).split('|').map(&:downcase)
+
+      groups_to_add = info['groups_to_add'] || attributes.multi('groups_to_add')&.join(',') || ''
+      groups_to_add = groups_to_add.downcase.split(',')
+      groups_to_add += user_group_list
+
+      groups_to_remove = info['groups_to_remove'] || attributes.multi('groups_to_remove')&.join(',') || ''
+      groups_to_remove = groups_to_remove.downcase.split(',')
 
       if total_group_list.present?
         groups_to_add = total_group_list & groups_to_add
@@ -257,34 +262,36 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     end
   end
 
-  def sync_custom_fields
+  def sync_custom_fields(user, attributes, info)
     return if user.blank?
 
     request_attributes.each do |attr|
       key = attr[:name]
-      user.custom_fields["#{name}_#{key}"] = attr(key) if attr(key).present?
+      val = info[key] || attributes.multi(key)&.join(",")
+      user.custom_fields["#{name}_#{key}"] = val if val.present?
     end
 
-    sync_user_fields
+    sync_user_fields(user, attributes, info)
     user.save_custom_fields
   end
 
-  def sync_user_fields
+  def sync_user_fields(user, attributes, info)
     statements = setting(:user_field_statements) || ""
 
     statements.split("|").each do |statement|
       key, field_id = statement.split(":")
       next if key.blank? || field_id.blank?
 
-      user.custom_fields["user_field_#{field_id}"] = attr(key) if attr(key).present?
+      val = info[key] || attributes.multi(key)&.join(",")
+      user.custom_fields["user_field_#{field_id}"] = val if val.present?
     end
   end
 
-  def sync_moderator
+  def sync_moderator(user, attributes)
     return unless setting(:sync_moderator)
 
     is_moderator_attribute = setting(:moderator_attribute) || 'isModerator'
-    is_moderator = ['1', 'true'].include?(attributes[is_moderator_attribute].try(:first).to_s.downcase)
+    is_moderator = ['1', 'true'].include?(attributes.single(is_moderator_attribute).to_s.downcase)
 
     return if user.moderator == is_moderator
 
@@ -292,11 +299,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     user.save
   end
 
-  def sync_admin
+  def sync_admin(user, attributes)
     return unless setting(:sync_admin)
 
     is_admin_attribute = setting(:admin_attribute) || 'isAdmin'
-    is_admin = ['1', 'true'].include?(attributes[is_admin_attribute].try(:first).to_s.downcase)
+    is_admin = ['1', 'true'].include?(attributes.single(is_admin_attribute).to_s.downcase)
 
     return if user.admin == is_admin
 
@@ -304,11 +311,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     user.save
   end
 
-  def sync_trust_level
+  def sync_trust_level(user, attributes)
     return unless setting(:sync_trust_level)
 
     trust_level_attribute = setting(:trust_level_attribute) || 'trustLevel'
-    level = attributes[trust_level_attribute].try(:first).to_i
+    level = attributes.single(trust_level_attribute).to_i
 
     return unless level.between?(1, 4)
 
@@ -322,11 +329,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     user.change_trust_level!(level, log_action_for: user)
   end
 
-  def sync_locale
+  def sync_locale(user, attributes)
     return unless setting(:sync_locale)
 
     locale_attribute = setting(:locale_attribute) || 'locale'
-    locale = attributes[locale_attribute].try(:first)
+    locale = attributes.single(locale_attribute)
 
     return unless LocaleSiteSetting.valid_value?(locale)
 
