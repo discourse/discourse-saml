@@ -89,8 +89,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   end
 
   def primary_email_verified?(auth_token)
-
-    attributes = auth_token.extra&.[](:raw_info) || OneLogin::RubySaml::Attributes.new
+    attributes = OneLogin::RubySaml::Attributes.new(auth_token.extra&.[](:raw_info) || {})
 
     group_attribute = setting(:groups_attribute)
     if setting(:validate_email_fields).present? && attributes.multi(group_attribute).present?
@@ -121,6 +120,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
       auth.info[:nickname] = uid.to_s
     end
 
+    auth.extra = { "raw_info" => attributes.attributes }
     result = super
 
     if setting(:log_auth)

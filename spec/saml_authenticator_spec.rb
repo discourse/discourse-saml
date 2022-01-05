@@ -114,7 +114,7 @@ describe SamlAuthenticator do
 
       result = @authenticator.after_authenticate(hash)
       SiteSetting.saml_request_attributes.split("|").each do |name|
-        expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info.multi(name).join(","))
+        expect(result.user.custom_fields["saml_#{name}"]).to eq(hash.extra.raw_info[name].join(","))
       end
     end
 
@@ -131,7 +131,7 @@ describe SamlAuthenticator do
 
       SiteSetting.saml_user_field_statements.split("|").each do |statement|
         key, id = statement.split(":")
-        expect(result.user.custom_fields["user_field_#{id}"]).to eq(attrs.multi(key).join(","))
+        expect(result.user.custom_fields["user_field_#{id}"]).to eq(attrs[key].join(","))
       end
     end
 
