@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-class SamlAuthenticator < ::Auth::OAuth2Authenticator
-  def initialize(name, opts = {})
-    opts[:trusted] ||= true
-    super(name, opts)
+class SamlAuthenticator < ::Auth::ManagedAuthenticator
+  def name
+    "saml"
   end
 
   def attribute_name_format(type = "basic")
@@ -89,8 +88,26 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     )
   end
 
+  def primary_email_verified?(auth_token)
+
+    attributes = auth_token.extra&.[](:raw_info) || OneLogin::RubySaml::Attributes.new
+
+    group_attribute = setting(:groups_attribute)
+    if setting(:validate_email_fields).present? && attributes.multi(group_attribute).present?
+      validate_email_fields = setting(:validate_email_fields).split("|").map(&:downcase)
+      member_of = attributes.multi(group_attribute).map { |g| g.downcase.split(',') }.flatten
+      if (validate_email_fields & member_of).present?
+        true
+      else
+        false
+      end
+    else
+      setting(:default_emails_valid)
+    end
+  end
+
   def after_authenticate(auth)
-    info = auth[:info]
+    info = auth.info
 
     extra_data = auth.extra || {}
     attributes = extra_data[:raw_info] || OneLogin::RubySaml::Attributes.new
@@ -98,8 +115,11 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     auth[:uid] = attributes.single('uid') || auth[:uid] if setting(:use_attributes_uid)
     uid = auth[:uid]
 
-    auth[:provider] = name
-    auth[:info][:email] ||= uid
+    auth.info[:email] ||= uid if uid.to_s&.include?("@")
+
+    if uid && setting(:use_attributes_uid)
+      auth.info[:nickname] = uid.to_s
+    end
 
     result = super
 
@@ -118,37 +138,9 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
       log("#{name}_auth: #{data.inspect}")
     end
 
-    result.username = if uid && setting(:use_attributes_uid)
-      uid.to_s
-    else
-      auth.info.nickname
-    end
-
-    result.name = begin
-      fullname = auth.info[:name].presence # From fullName, name, or other custom attribute_statement
-      fullname ||= "#{auth.info[:first_name]} #{auth.info[:last_name]}"
-      fullname
-    end
-
     if setting(:skip_email_validation)
       result.skip_email_validation = true
     end
-
-    group_attribute = setting(:groups_attribute)
-    if setting(:validate_email_fields).present? && attributes.multi(group_attribute).present?
-      validate_email_fields = setting(:validate_email_fields).split("|").map(&:downcase)
-      member_of = attributes.multi(group_attribute).map { |g| g.downcase.split(',') }.flatten
-      if (validate_email_fields & member_of).present?
-        result.email_valid = true
-      else
-        result.email_valid = false
-      end
-    else
-      result.email_valid = setting(:default_emails_valid)
-    end
-
-    result.extra_data[:saml_attributes] = attributes.attributes
-    result.extra_data[:saml_info] = info
 
     if result.user.blank?
       result.username = '' if setting(:clear_username)
@@ -176,8 +168,13 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
   def after_create_account(user, auth)
     super
 
-    info = auth[:extra_data][:saml_info]
-    attributes = OneLogin::RubySaml::Attributes.new(auth[:extra_data][:saml_attributes])
+    uaa = UserAssociatedAccount.find_by(
+      provider_name: auth.extra_data[:provider],
+      provider_uid: auth.extra_data[:uid]
+    )
+
+    info = OmniAuth::AuthHash::InfoHash.new(uaa.info)
+    attributes = OneLogin::RubySaml::Attributes.new(uaa.extra&.[]("raw_info") || {})
 
     sync_groups(user, attributes, info)
     sync_moderator(user, attributes)
@@ -347,6 +344,14 @@ class SamlAuthenticator < ::Auth::OAuth2Authenticator
     # Checking target_url global setting for backwards compatibility
     # (the plugin used to be enabled-by-default)
     setting(:enabled) || !!GlobalSetting.try("#{name}_target_url")
+  end
+
+  def can_connect_existing_user?
+    false
+  end
+
+  def can_revoke?
+    false
   end
 
   def self.saml_base_url

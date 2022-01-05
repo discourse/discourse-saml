@@ -3,20 +3,21 @@
 require 'rails_helper'
 
 describe SamlAuthenticator do
-  Fabricator(:saml_user_info, class_name: :oauth2_user_info) do
-    provider "saml"
+  Fabricator(:saml_user_info, class_name: :user_associated_account) do
+    provider_name "saml"
     user
   end
 
   context 'after_authenticate' do
     before do
-      @authenticator = SamlAuthenticator.new('saml')
+      @authenticator = SamlAuthenticator.new
       @uid = 123456
       @user = Fabricate(:user)
     end
 
     def auth_hash(attributes)
       hash = OmniAuth::AuthHash.new(
+        provider: "saml",
         uid: @uid,
         info: {
             name: "John Doe",
@@ -30,6 +31,7 @@ describe SamlAuthenticator do
 
     it 'finds user by email' do
       hash = OmniAuth::AuthHash.new(
+        provider: "saml",
         uid: "654321",
         info: {
             name: "John Doe",
@@ -42,9 +44,10 @@ describe SamlAuthenticator do
     end
 
     it 'finds user by uid' do
-      Fabricate(:saml_user_info, uid: @uid, user: @user)
+      Fabricate(:saml_user_info, provider_uid: @uid, user: @user)
 
       hash = OmniAuth::AuthHash.new(
+        provider: "saml",
         uid: @uid,
         info: {
             name: "John Doe",
@@ -58,9 +61,10 @@ describe SamlAuthenticator do
     end
 
     it 'finds user by email in uid' do
-      Fabricate(:saml_user_info, uid: @uid, user: @user)
+      Fabricate(:saml_user_info, provider_uid: @uid, user: @user)
 
       hash = OmniAuth::AuthHash.new(
+        provider: "saml",
         uid: @user.email,
         info: {}
       )
@@ -72,7 +76,10 @@ describe SamlAuthenticator do
     it 'defaults email_valid to false if saml_default_emails_valid is false' do
       SiteSetting.saml_default_emails_valid = false
 
+      Fabricate(:saml_user_info, provider_uid: @uid, user: @user)
+
       hash = OmniAuth::AuthHash.new(
+        provider: "saml",
         uid: @uid,
         info: {
             name: "John Doe",
@@ -148,7 +155,7 @@ describe SamlAuthenticator do
       hash = auth_hash('uid' => ["789"])
 
       @authenticator.after_authenticate(hash)
-      expect(Oauth2UserInfo.last.uid).to eq("789")
+      expect(UserAssociatedAccount.last.provider_uid).to eq("789")
     end
 
     it 'creates new account automatically' do
@@ -157,6 +164,7 @@ describe SamlAuthenticator do
       email = "johndoe@example.com"
 
       hash = OmniAuth::AuthHash.new(
+        provider: "saml",
         uid: @uid,
         info: {
             name: name,
@@ -169,7 +177,7 @@ describe SamlAuthenticator do
       expect(result.user.email).to eq(email)
       expect(result.user.username).to eq("John_Doe")
       expect(result.user.active).to eq(true)
-      expect(result.user.id).to eq(Oauth2UserInfo.find_by(uid: @uid, provider: @authenticator.name).user_id)
+      expect(result.user.id).to eq(UserAssociatedAccount.find_by(provider_uid: @uid, provider_name: @authenticator.name).user_id)
     end
 
     it 'ignores invalid input when automatically creating new account' do
@@ -181,6 +189,7 @@ describe SamlAuthenticator do
       email = "johndoe@example.com"
 
       hash = OmniAuth::AuthHash.new(
+        provider: "saml",
         uid: @uid,
         info: {
           name: name,
@@ -198,6 +207,7 @@ describe SamlAuthenticator do
       let(:email) { "johndoe@example.com" }
       let(:screen_name) { "johndoe" }
       let(:hash) { OmniAuth::AuthHash.new(
+          provider: "saml",
           uid: @uid,
           info: {
               name: name,
@@ -233,6 +243,7 @@ describe SamlAuthenticator do
       let(:email) { "johndoe@example.com" }
       let(:screen_name) { "johndoe" }
       let(:hash) { OmniAuth::AuthHash.new(
+          provider: "saml",
           uid: @uid,
           info: {
               name: name,
@@ -250,16 +261,18 @@ describe SamlAuthenticator do
         )
       }
 
-      it "should be populated from the fullName by default" do
+      it "should prefer firstname_lastname" do
+        result = @authenticator.after_authenticate(hash)
+        expect(result.name).to eq("#{first_name} #{last_name}")
+      end
+
+      it "should fallback to `name`" do
+        hash.info.delete(:first_name)
+        hash.info.delete(:last_name)
         result = @authenticator.after_authenticate(hash)
         expect(result.name).to eq(name)
       end
 
-      it "should fall back to firstname_lastname" do
-        hash.info.delete(:name)
-        result = @authenticator.after_authenticate(hash)
-        expect(result.name).to eq("#{first_name} #{last_name}")
-      end
     end
 
     describe "sync_groups" do
@@ -457,26 +470,30 @@ describe SamlAuthenticator do
     end
 
     context 'after_create_account' do
+      let(:group) { Fabricate(:group) }
+      let(:auth_hash) {
+        OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: "123",
+          info: {
+            groups_to_add: group.name
+          },
+        )
+      }
+
       it 'adds to group' do
         SiteSetting.saml_sync_groups = true
-        authenticator = SamlAuthenticator.new("saml", trusted: true)
-        user = Fabricate(:user, email: 'realgoogleuser@gmail.com')
-        group = Fabricate(:group)
+        authenticator = SamlAuthenticator.new
 
-        result = Auth::Result.new
-        result.user = user
-        result.extra_data = {
-          uid: "123456",
-          provider: "saml",
-          saml_info: {
-            "groups_to_add" => group.name
-          },
-          saml_attributes: {
-            "name" => ["John Doe"],
-            "email" => [user.email],
-          }
-        }
-        authenticator.after_create_account(user, result)
+        result = authenticator.after_authenticate(auth_hash)
+
+        user = Fabricate(:user, email: 'realgoogleuser@gmail.com')
+
+        session_data = result.session_data
+        after_create_result = Auth::Result.from_session_data(session_data, user: user)
+
+        authenticator.after_create_account(user, after_create_result)
+
         expect(user.groups.find(group.id).present?).to eq(true)
       end
     end
