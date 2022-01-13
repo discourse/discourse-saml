@@ -190,13 +190,10 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
 
     # Use a mutex here to counter SAML responses that are sent at the same time and the same email payload
     DistributedMutex.synchronize("discourse_saml_#{try_email}") do
-      try_name = result.name.presence
-      try_username = result.username.presence
-
       user_params = {
         primary_email: UserEmail.new(email: try_email, primary: true),
-        name: try_name || User.suggest_name(try_username || try_email),
-        username: UserNameSuggester.suggest(try_username, try_name, try_email, uid),
+        name: resolve_name(result.name, result.username, result.email),
+        username: resolve_username(result.username, result.name, result.email, uid),
         active: true
       }
 
@@ -358,4 +355,21 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     DiscourseSaml.setting(:base_url).presence || Discourse.base_url
   end
 
+  private
+
+  def resolve_name(name, username, email)
+    return name if name.present?
+
+    suggester_input = username.presence
+    suggester_input ||= email if SiteSetting.use_email_for_username_and_name_suggestions
+    User.suggest_name(suggester_input)
+  end
+
+  def resolve_username(username, name, email, uid)
+    suggester_input = [username, name]
+    suggester_input << email if SiteSetting.use_email_for_username_and_name_suggestions
+    suggester_input << uid
+
+    UserNameSuggester.suggest(*suggester_input)
+  end
 end
