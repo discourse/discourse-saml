@@ -50,7 +50,7 @@ module ::DiscourseSaml
 end
 
 after_initialize do
-  if !!GlobalSetting.try("#{name}_target_url")
+  if !!GlobalSetting.try("saml_target_url")
     # Configured via environment variables. Hide all the site settings
     # from the UI to avoid confusion
     SiteSetting.defaults.all.keys.each do |k|
