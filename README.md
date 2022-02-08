@@ -72,6 +72,21 @@ If the idp has an RSA key split up as modulus and exponent, this javascript libr
 
 https://www.npmjs.com/package/rsa-pem-from-mod-exp
 
+### Moving from environment variables to Site Settings
+
+With the Environment variables set, run this snippet in the rails console:
+```ruby
+SiteSetting.defaults.all.keys.each do |k|
+  next if !k.to_s.start_with?("saml_")
+  if val = GlobalSetting.try(k)
+    puts "Setting #{k} to #{val} in the database"
+    SiteSetting.add_override!(k, val)
+  end
+end;
+SiteSetting.saml_enabled = true
+```
+Then remove the environment variables and restart the server. The plugin will now be using site settings which can be modified in the admin UI.
+
 ### License
 
 MIT
