@@ -158,48 +158,170 @@ describe SamlAuthenticator do
       expect(UserAssociatedAccount.last.provider_uid).to eq("789")
     end
 
-    it 'creates new account automatically' do
-      SiteSetting.saml_auto_create_account = true
-      name = "John Doe"
-      email = "johndoe@example.com"
+    context 'when automatically creating a new account' do
+      before do
+        SiteSetting.saml_auto_create_account = true
+      end
 
-      hash = OmniAuth::AuthHash.new(
-        provider: "saml",
-        uid: @uid,
-        info: {
+      it 'creates a new account and a UserAssociatedAccount record' do
+        name = "John Doe"
+        email = "johndoe@example.com"
+
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
             name: name,
             email: email
-        }
-      )
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
 
-      result = @authenticator.after_authenticate(hash)
-      expect(result.user.name).to eq(name)
-      expect(result.user.email).to eq(email)
-      expect(result.user.username).to eq("John_Doe")
-      expect(result.user.active).to eq(true)
-      expect(result.user.id).to eq(UserAssociatedAccount.find_by(provider_uid: @uid, provider_name: @authenticator.name).user_id)
-    end
+        expect(result.user.name).to eq(name)
+        expect(result.user.email).to eq(email)
+        expect(result.user.username).to eq("John_Doe")
+        expect(result.user.active).to eq(true)
+        expect(result.user.id).to eq(UserAssociatedAccount.find_by(provider_uid: @uid, provider_name: @authenticator.name).user_id)
+      end
 
-    it 'ignores invalid input when automatically creating new account' do
-      SiteSetting.saml_auto_create_account = true
-      SiteSetting.unicode_usernames = false
+      it 'ignores invalid input when generating username' do
+        SiteSetting.unicode_usernames = false
 
-      nickname = "άκυρος"
-      name = "άκυρος"
-      email = "johndoe@example.com"
+        nickname = "άκυρος"
+        name = "john"
+        email = "johndoe@example.com"
 
-      hash = OmniAuth::AuthHash.new(
-        provider: "saml",
-        uid: @uid,
-        info: {
-          name: name,
-          nickname: nickname,
-          email: email
-        }
-      )
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
+            name: name,
+            nickname: nickname,
+            email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
 
-      result = @authenticator.after_authenticate(hash)
-      expect(result.user.username).to eq("johndoe")
+        expect(result.user.username).to eq(name) # ignores nickname and uses name
+      end
+
+      it 'use email as a source for username if enabled in settings' do
+        SiteSetting.use_email_for_username_and_name_suggestions = true
+
+        nickname = ""
+        name = ""
+        email = "johndoe@example.com"
+
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
+            name: name,
+            nickname: nickname,
+            email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+
+        expect(result.user.username).to eq("johndoe") # "johndoe" was extracted from email
+      end
+
+      it 'by default does not use email as a source for username' do
+        nickname = ""
+        name = ""
+        email = "johndoe@example.com"
+
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
+            name: name,
+            nickname: nickname,
+            email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+
+        expect(result.user.username).to eq(@uid.to_s) # not "johndoe" that can be extracted from email
+      end
+
+      it 'if name is present uses it for name' do
+        name = "John Doe"
+        nickname = "john"
+        email = "johnmail@example.com"
+
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
+            name: name,
+            nickname: nickname,
+            email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+
+        expect(result.user.name).to eq(name)
+      end
+
+      it 'uses nickname as name if name is not present' do
+        name = ""
+        nickname = "john"
+        email = "johnmail@example.com"
+
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
+            name: name,
+            nickname: nickname,
+            email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+
+        expect(result.user.name).to eq("John")
+      end
+
+      it 'does not use email as a source for name suggestions by default' do
+        name = ""
+        nickname = ""
+        email = "johnmail@example.com"
+
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
+            name: name,
+            nickname: nickname,
+            email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+
+        expect(result.user.name).to eq("") # not "mail" extracted from email
+      end
+
+      it 'uses email as a source for name suggestions if enabled in settings' do
+        SiteSetting.use_email_for_username_and_name_suggestions = true
+
+        name = ""
+        nickname = ""
+        email = "johnmail@example.com"
+
+        hash = OmniAuth::AuthHash.new(
+          provider: "saml",
+          uid: @uid,
+          info: {
+            name: name,
+            nickname: nickname,
+            email: email
+          }
+        )
+        result = @authenticator.after_authenticate(hash)
+
+        expect(result.user.name).to eq("Johnmail")
+      end
     end
 
     describe "username" do
