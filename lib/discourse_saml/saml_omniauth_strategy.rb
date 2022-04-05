@@ -25,7 +25,7 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
       env[Rack::RACK_SESSION_OPTIONS][:skip] = true # Do not set any session cookies. They'll override our SameSite ones
 
       # Make browser re-issue the request in a same-site context so we get cookies
-      # For this particular action, we explicitely **want** cross-site requests to include session cookies
+      # For this particular action, we explicitly **want** cross-site requests to include session cookies
       render_auto_submitted_form(
         destination: callback_url,
         params: {
