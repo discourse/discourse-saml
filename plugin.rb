@@ -5,6 +5,7 @@
 # version: 1.0
 # author: Discourse Team
 # url: https://github.com/discourse/discourse-saml
+# transpile_js: true
 
 gem 'macaddr', '1.0.0'
 gem 'uuid', '2.3.7'
@@ -77,7 +78,7 @@ after_initialize do
   end
   ::SessionController.prepend(::DiscourseSaml::SessionControllerExtensions)
 
-  # "SAML Forced Dvomains" - Prevent login via other omniauth strategies
+  # "SAML Forced Domains" - Prevent login via other omniauth strategies
   class ::DiscourseSaml::ForcedSamlError < StandardError; end
   on(:after_auth) do |authenticator, result|
     next if authenticator.name == "saml"

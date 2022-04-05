@@ -59,7 +59,7 @@ saml:
 
   saml_sync_groups: false
   saml_groups_fullsync: false
-  saml_groups_attribute: 'memberOf'
+  saml_groups_attribute: "memberOf"
   saml_groups_ldap_leafcn: false
   saml_sync_groups_list:
     type: list
@@ -70,7 +70,7 @@ saml:
     default: ""
 
   saml_sync_email: false
-  
+
   saml_sync_moderator: false
   saml_moderator_attribute: "isModerator"
   saml_sync_admin: false
@@ -78,7 +78,7 @@ saml:
   saml_sync_trust_level: false
   saml_trust_level_attribute: "trustLevel"
   saml_sync_locale: false
-  saml_locale_attribute: 'locale'
+  saml_locale_attribute: "locale"
 
   saml_forced_domains:
     type: list

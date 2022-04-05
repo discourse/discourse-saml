@@ -7,5 +7,5 @@ en:
   admin_js:
     admin:
       site_settings:
-        categories: 
+        categories:
           saml: SAML

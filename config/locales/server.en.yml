@@ -16,7 +16,7 @@ en:
 
     saml_request_method: The HTTP method used when directing the user to the Identity Provider
 
-    saml_sp_certificate: SAML Service Provider X.509 certficate. Used to sign messages once enabled via the `saml_*_signed` settings"
+    saml_sp_certificate: SAML Service Provider X.509 certificate. Used to sign messages once enabled via the `saml_*_signed` settings"
     saml_sp_private_key: SAML Service Provider X.509 private key. Used to sign messages once enabled via the `saml_*_signed` settings"
     saml_authn_requests_signed: Enable Service Provider signatures for AuthNRequest
     saml_want_assertions_signed: Enable Service Provider signatures for Assertions
