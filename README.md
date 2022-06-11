@@ -39,6 +39,7 @@ Add the following settings to your `discourse.conf` file:
 - `saml_target_url`
 
 ### Group sync
+
 - `DISCOURSE_SAML_SYNC_GROUPS`: Sync groups. Defaults to false.
 - `DISCOURSE_SAML_GROUPS_ATTRIBUTE`: SAML attribute to use for group sync. Defaults to `memberOf`
 - `DISCOURSE_SAML_GROUPS_FULLSYNC`: Should the assigned groups be completely synced including adding AND removing groups based on the IDP? Defaults to false. If set to true, `DISCOURSE_SAML_SYNC_GROUPS_LIST` and SAML attribute `groups_to_add`/`groups_to_remove` are not used.
@@ -58,13 +59,12 @@ Add the following settings to your `discourse.conf` file:
 - `DISCOURSE_SAML_VALIDATE_EMAIL_FIELDS`: defaults to blank. This setting accepts pipe separated group names that are supplied in `memberOf` attribute in SAML payload. If the group name specified in the value matches that from `memberOf` attribute than the `email_valid` is set to `true`, otherwise it defaults to `false`. This setting overrides `DISCOURSE_SAML_DEFAULT_EMAILS_VALID`.
 - `DISCOURSE_SAML_BUTTON_TITLE`: 'with SAML'
 - `DISCOURSE_SAML_TITLE`: 'SAML'
-- `DISCOURSE_SAML_SYNC_MODERATOR`: defaults to false. If set to `true` user get moderator role if SAML attribute `isModerator` (or attribute specified by `DISCOURSE_SAML_MODERATOR_ATTRIBUTE`) is 1 or true.  
+- `DISCOURSE_SAML_SYNC_MODERATOR`: defaults to false. If set to `true` user get moderator role if SAML attribute `isModerator` (or attribute specified by `DISCOURSE_SAML_MODERATOR_ATTRIBUTE`) is 1 or true.
 - `DISCOURSE_SAML_MODERATOR_ATTRIBUTE`: defaults to `isModerator`
-- `DISCOURSE_SAML_SYNC_ADMIN`: defaults to false. If set to `true` user get admin role if SAML attribute `isAdmin` (or attribute specified by `DISCOURSE_SAML_ADMIN_ATTRIBUTE`) is 1 or true.  
+- `DISCOURSE_SAML_SYNC_ADMIN`: defaults to false. If set to `true` user get admin role if SAML attribute `isAdmin` (or attribute specified by `DISCOURSE_SAML_ADMIN_ATTRIBUTE`) is 1 or true.
 - `DISCOURSE_SAML_ADMIN_ATTRIBUTE`: defaults to `isAdmin`
 - `DISCOURSE_SAML_SYNC_TRUST_LEVEL`: defaults to false. If set to `true` user's trust level is set to the SAML attribute `trustLevel` (or attribute specified by `DISCOURSE_SAML_TRUST_LEVEL_ATTRIBUTE`) which needs to be between 1 and 4.
 - `DISCOURSE_SAML_TRUST_LEVEL_ATTRIBUTE`: defaults to `trustLevel`
-
 
 ### Converting an RSA Key to a PEM
 
@@ -75,6 +75,7 @@ https://www.npmjs.com/package/rsa-pem-from-mod-exp
 ### Moving from environment variables to Site Settings
 
 With the Environment variables set, run this snippet in the rails console:
+
 ```ruby
 SiteSetting.defaults.all.keys.each do |k|
   next if !k.to_s.start_with?("saml_")
@@ -85,6 +86,7 @@ SiteSetting.defaults.all.keys.each do |k|
 end;
 SiteSetting.saml_enabled = true
 ```
+
 Then remove the environment variables and restart the server. The plugin will now be using site settings which can be modified in the admin UI.
 
 ### License
