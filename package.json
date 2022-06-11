@@ -1,10 +1,10 @@
 {
   "name": "discourse-saml",
   "version": "1.0.0",
-  "repository": "git@github.com:discourse/discourse-saml.git",
+  "repository": "https://github.com/discourse/discourse-saml",
   "author": "Discourse",
   "license": "MIT",
   "devDependencies": {
-    "eslint-config-discourse": "^3.0.0"
+    "eslint-config-discourse": "^3.1.0"
   }
 }
