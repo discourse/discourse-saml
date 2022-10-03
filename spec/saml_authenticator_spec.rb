@@ -8,7 +8,7 @@ describe SamlAuthenticator do
     user
   end
 
-  context 'after_authenticate' do
+  describe 'after_authenticate' do
     before do
       @authenticator = SamlAuthenticator.new
       @uid = 123456
@@ -591,7 +591,7 @@ describe SamlAuthenticator do
       end
     end
 
-    context 'after_create_account' do
+    describe 'after_create_account' do
       let(:group) { Fabricate(:group) }
       let(:auth_hash) {
         OmniAuth::AuthHash.new(
