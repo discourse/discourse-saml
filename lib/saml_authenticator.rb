@@ -62,7 +62,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
       idp_cert_fingerprint: setting(:cert_fingerprint).presence,
       idp_cert_fingerprint_algorithm: setting(:cert_fingerprint_algorithm),
       idp_cert: setting(:cert).presence,
-      idp_cert_multi: setting(:cert_multi).presence,
+      idp_cert_multi: idp_cert_multi,
       request_attributes: request_attributes,
       attribute_statements: attribute_statements,
       assertion_consumer_service_url: SamlAuthenticator.saml_base_url + "/auth/#{name}/callback",
@@ -356,6 +356,15 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   end
 
   private
+
+  def idp_cert_multi
+    return unless setting(:cert_multi).present?
+
+    {
+      signing: [setting(:cert_multi)],
+      encryption: []
+    }
+  end
 
   def resolve_name(name, username, email)
     return name if name.present?
