@@ -360,8 +360,11 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   def idp_cert_multi
     return unless setting(:cert_multi).present?
 
+    certificates = setting(:cert_multi).split('|')
+    certificates.push(setting(:cert)) if setting(:cert).present?
+
     {
-      signing: [setting(:cert_multi)],
+      signing: certificates,
       encryption: []
     }
   end
