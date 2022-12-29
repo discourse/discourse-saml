@@ -1,22 +1,14 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe "SAML Forced Domains" do
   let(:password) { "abcdefghijklmnop" }
   let(:saml_user) do
-    Fabricate(
-      :user,
-      email: "user@samlonly.example.com",
-      password: password
-    ).tap { |u| u.activate }
+    Fabricate(:user, email: "user@samlonly.example.com", password: password).tap { |u| u.activate }
   end
   let(:other_user) do
-    Fabricate(
-      :user,
-      email: "user@example.com",
-      password: password
-    ).tap { |u| u.activate }
+    Fabricate(:user, email: "user@example.com", password: password).tap { |u| u.activate }
   end
 
   before do
@@ -27,27 +19,21 @@ describe "SAML Forced Domains" do
 
   describe "username/password login" do
     it "works as normal when feature disabled" do
-      post "/session.json", params: {
-        login: saml_user.username, password: password
-      }
+      post "/session.json", params: { login: saml_user.username, password: password }
       expect(response.status).to eq(200)
       expect(session[:current_user_id]).to eq(saml_user.id)
     end
 
     it "blocks logins for blocked domains" do
       SiteSetting.saml_forced_domains = "samlonly.example.com"
-      post "/session.json", params: {
-        login: saml_user.username, password: password
-      }
+      post "/session.json", params: { login: saml_user.username, password: password }
       expect(response.status).to eq(200)
       expect(response.parsed_body["error"]).to eq(I18n.t("login.use_saml_auth"))
       expect(session[:current_user_id]).to eq(nil)
     end
 
     it "allows logins for other domains" do
-      post "/session.json", params: {
-        login: other_user.username, password: password
-      }
+      post "/session.json", params: { login: other_user.username, password: password }
       expect(response.status).to eq(200)
       expect(session[:current_user_id]).to eq(other_user.id)
     end
@@ -57,9 +43,13 @@ describe "SAML Forced Domains" do
     it "works as normal when feature disabled" do
       post "/u/email-login.json", params: { login: saml_user.email }
       expect(response.status).to eq(200)
-      expect_job_enqueued(job: :critical_user_email, args: {
-        user_id: saml_user.id, type: 'email_login'
-      })
+      expect_job_enqueued(
+        job: :critical_user_email,
+        args: {
+          user_id: saml_user.id,
+          type: "email_login",
+        },
+      )
     end
 
     it "blocks login for blocked domains" do
@@ -73,21 +63,27 @@ describe "SAML Forced Domains" do
       SiteSetting.saml_forced_domains = "samlonly.example.com"
       post "/u/email-login.json", params: { login: other_user.email }
       expect(response.status).to eq(200)
-      expect_job_enqueued(job: :critical_user_email, args: {
-        user_id: other_user.id, type: 'email_login'
-      })
+      expect_job_enqueued(
+        job: :critical_user_email,
+        args: {
+          user_id: other_user.id,
+          type: "email_login",
+        },
+      )
     end
   end
 
   describe "external login" do
     let(:mock_auth) do
       OmniAuth::AuthHash.new(
-        provider: 'google_oauth2',
-        uid: '123545',
-        info: OmniAuth::AuthHash::InfoHash.new(
-          email: saml_user.email,
-        ),
-        extra: { raw_info: { email_verified: true } }
+        provider: "google_oauth2",
+        uid: "123545",
+        info: OmniAuth::AuthHash::InfoHash.new(email: saml_user.email),
+        extra: {
+          raw_info: {
+            email_verified: true,
+          },
+        },
       )
     end
 

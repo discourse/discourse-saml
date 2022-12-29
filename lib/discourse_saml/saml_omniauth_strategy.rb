@@ -10,10 +10,7 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
         authn_request = OneLogin::RubySaml::Authrequest.new
         params = authn_request.create_params(settings, additional_params_for_authn_request)
         destination = settings.idp_sso_service_url
-        render_auto_submitted_form(
-          destination: destination,
-          params: params
-        )
+        render_auto_submitted_form(destination: destination, params: params)
       end
     else
       super
@@ -21,7 +18,8 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
   end
 
   def callback_phase
-    if request.request_method.downcase.to_sym == :post && !request.params["SameSite"] && request.params["SAMLResponse"]
+    if request.request_method.downcase.to_sym == :post && !request.params["SameSite"] &&
+         request.params["SAMLResponse"]
       env[Rack::RACK_SESSION_OPTIONS][:skip] = true # Do not set any session cookies. They'll override our SameSite ones
 
       # Make browser re-issue the request in a same-site context so we get cookies
@@ -30,8 +28,8 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
         destination: callback_url,
         params: {
           "SAMLResponse" => request.params["SAMLResponse"],
-          "SameSite" => "1"
-        }
+          "SameSite" => "1",
+        },
       )
     else
       super
@@ -41,13 +39,15 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
   private
 
   def render_auto_submitted_form(destination:, params:)
-    submit_script_url = UrlHelper.absolute("#{Discourse.base_path}/plugins/discourse-saml/javascripts/submit-form-on-load.js", GlobalSetting.cdn_url)
+    submit_script_url =
+      UrlHelper.absolute(
+        "#{Discourse.base_path}/plugins/discourse-saml/javascripts/submit-form-on-load.js",
+        GlobalSetting.cdn_url,
+      )
 
-    inputs = params.map do |key, value|
-      <<~HTML
+    inputs = params.map { |key, value| <<~HTML }.join("\n")
         <input type="hidden" name="#{CGI.escapeHTML(key)}" value="#{CGI.escapeHTML(value)}"/>
       HTML
-    end.join("\n")
 
     html = <<~HTML
       <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
@@ -73,7 +73,7 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
       </html>
     HTML
 
-    r = Rack::Response.new(html, 200, { 'content-type' => 'text/html' })
+    r = Rack::Response.new(html, 200, { "content-type" => "text/html" })
     r.finish
   end
 end
