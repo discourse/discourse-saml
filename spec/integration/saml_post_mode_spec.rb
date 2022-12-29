@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe "SAML POST-mode functionality", type: :request do
   before do
@@ -26,7 +26,7 @@ describe "SAML POST-mode functionality", type: :request do
       with: {
         "action" => "https://example.com/samlidp",
         "method" => "post",
-      }
+      },
     )
 
     expect(response.body).to have_tag(
@@ -34,14 +34,15 @@ describe "SAML POST-mode functionality", type: :request do
       with: {
         "name" => "SAMLRequest",
         "type" => "hidden",
-      }
+      },
     )
 
-    html = Nokogiri::HTML5(response.body)
+    html = Nokogiri.HTML5(response.body)
     script_url = html.at("script").attribute("src").value
 
     csp = response.headers["content-security-policy"]
-    script_src = csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
+    script_src =
+      csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
     included_in_csp = script_src.any? { |allowed_src| script_url.start_with?(allowed_src) }
 
     expect(included_in_csp).to eq(true)
@@ -58,7 +59,7 @@ describe "SAML POST-mode functionality", type: :request do
       with: {
         "action" => "https://example.com/samlidp",
         "method" => "post",
-      }
+      },
     )
 
     expect(response.body).to have_tag(
@@ -66,14 +67,15 @@ describe "SAML POST-mode functionality", type: :request do
       with: {
         "name" => "SAMLRequest",
         "type" => "hidden",
-      }
+      },
     )
 
-    html = Nokogiri::HTML5(response.body)
+    html = Nokogiri.HTML5(response.body)
     script_url = html.at("script").attribute("src").value
 
     csp = response.headers["content-security-policy"]
-    script_src = csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
+    script_src =
+      csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
     included_in_csp = script_src.any? { |allowed_src| script_url.start_with?(allowed_src) }
 
     expect(included_in_csp).to eq(true)

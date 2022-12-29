@@ -8,12 +8,9 @@ describe "SAML staged user handling", type: :request do
     SiteSetting.saml_enabled = true
     OmniAuth.config.test_mode = true
     OmniAuth.config.mock_auth[:saml] = OmniAuth::AuthHash.new(
-      provider: 'saml',
-      uid: '123545',
-      info: OmniAuth::AuthHash::InfoHash.new(
-        nickname: staged.username,
-        email: staged.email,
-      ),
+      provider: "saml",
+      uid: "123545",
+      info: OmniAuth::AuthHash::InfoHash.new(nickname: staged.username, email: staged.email),
     )
 
     UsersController.any_instance.stubs(:honeypot_value).returns(nil)
@@ -25,17 +22,10 @@ describe "SAML staged user handling", type: :request do
 
     expect(response.status).to eq(302)
     expect(response.location).to eq("http://test.localhost/")
-    expect(session[:authentication]).to include(
-      username: staged.username,
-      email: staged.email
-    )
+    expect(session[:authentication]).to include(username: staged.username, email: staged.email)
     expect(JSON.parse(cookies[:authentication_data])["username"]).to eq(staged.username)
 
-    post "/u.json", params: {
-      name: staged.name,
-      username: staged.username,
-      email: staged.email
-    }
+    post "/u.json", params: { name: staged.name, username: staged.username, email: staged.email }
     expect(response.status).to eq(200)
 
     expect(UserAssociatedAccount.where(user: staged).count).to eq(1)

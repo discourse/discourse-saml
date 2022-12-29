@@ -7,15 +7,13 @@
 # url: https://github.com/discourse/discourse-saml
 # transpile_js: true
 
-gem 'macaddr', '1.0.0'
-gem 'uuid', '2.3.7'
-gem 'rexml', '3.2.5'
-gem 'ruby-saml', '1.13.0'
-gem "omniauth-saml", '1.9.0'
+gem "macaddr", "1.0.0"
+gem "uuid", "2.3.7"
+gem "rexml", "3.2.5"
+gem "ruby-saml", "1.13.0"
+gem "omniauth-saml", "1.9.0"
 
-if !GlobalSetting.try("saml_target_url")
-  enabled_site_setting :saml_enabled
-end
+enabled_site_setting :saml_enabled if !GlobalSetting.try("saml_target_url")
 
 on(:before_session_destroy) do |data|
   next if !DiscourseSaml.setting(:slo_target_url).present?
@@ -42,9 +40,10 @@ module ::DiscourseSaml
     return if !DiscourseSaml.setting(:forced_domains).present?
     return if email.blank?
 
-    DiscourseSaml.setting(:forced_domains).split(/[,|]/).each do |domain|
-      return true if email.end_with?("@#{domain}")
-    end
+    DiscourseSaml
+      .setting(:forced_domains)
+      .split(/[,|]/)
+      .each { |domain| return true if email.end_with?("@#{domain}") }
 
     false
   end
@@ -79,7 +78,8 @@ after_initialize do
   ::SessionController.prepend(::DiscourseSaml::SessionControllerExtensions)
 
   # "SAML Forced Domains" - Prevent login via other omniauth strategies
-  class ::DiscourseSaml::ForcedSamlError < StandardError; end
+  class ::DiscourseSaml::ForcedSamlError < StandardError
+  end
   on(:after_auth) do |authenticator, result|
     next if authenticator.name == "saml"
     if [result.user&.email, result.email].any? { |e| ::DiscourseSaml.is_saml_forced_domain?(e) }
@@ -88,7 +88,7 @@ after_initialize do
   end
   Users::OmniauthCallbacksController.rescue_from(::DiscourseSaml::ForcedSamlError) do
     flash[:error] = I18n.t("login.use_saml_auth")
-    render('failure')
+    render("failure")
   end
 end
 
@@ -100,6 +100,4 @@ require_relative "lib/saml_authenticator"
 name = GlobalSetting.try(:saml_title)
 button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title)
 
-auth_provider title: button_title,
-              pretty_name: name,
-              authenticator: SamlAuthenticator.new
+auth_provider title: button_title, pretty_name: name, authenticator: SamlAuthenticator.new

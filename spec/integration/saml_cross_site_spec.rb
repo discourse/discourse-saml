@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe "SAML cross-site with same-site cookie", type: :request do
   before do
@@ -16,7 +16,7 @@ describe "SAML cross-site with same-site cookie", type: :request do
       with: {
         "action" => "http://test.localhost/auth/saml/callback",
         "method" => "post",
-      }
+      },
     )
 
     expect(response.body).to have_tag(
@@ -25,7 +25,7 @@ describe "SAML cross-site with same-site cookie", type: :request do
         "name" => "SAMLResponse",
         "value" => "somesamldata",
         "type" => "hidden",
-      }
+      },
     )
 
     expect(response.body).to have_tag(
@@ -34,7 +34,7 @@ describe "SAML cross-site with same-site cookie", type: :request do
         "name" => "SameSite",
         "value" => "1",
         "type" => "hidden",
-      }
+      },
     )
 
     expect(response.body).to have_tag("script")

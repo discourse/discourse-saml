@@ -8,19 +8,18 @@ describe "SAML Overrides Email", type: :request do
   fab!(:new_email) { "new@example.com" }
   fab!(:new_username) { "newusername" }
   fab!(:user) { Fabricate(:user, email: initial_email, username: initial_username) }
-  fab!(:uac) { UserAssociatedAccount.create!(user: user, provider_name: "saml", provider_uid: "12345") }
+  fab!(:uac) do
+    UserAssociatedAccount.create!(user: user, provider_name: "saml", provider_uid: "12345")
+  end
 
   before do
     SiteSetting.saml_enabled = true
 
     OmniAuth.config.test_mode = true
     OmniAuth.config.mock_auth[:saml] = OmniAuth::AuthHash.new(
-      provider: 'saml',
-      uid: '12345',
-      info: OmniAuth::AuthHash::InfoHash.new(
-        email: new_email,
-        nickname: new_username,
-      ),
+      provider: "saml",
+      uid: "12345",
+      info: OmniAuth::AuthHash::InfoHash.new(email: new_email, nickname: new_username),
     )
   end
 
@@ -34,7 +33,7 @@ describe "SAML Overrides Email", type: :request do
     expect(user.username).to eq(initial_username)
   end
 
-  it 'updates user email if enabled' do
+  it "updates user email if enabled" do
     SiteSetting.saml_sync_email = true
 
     get "/auth/saml/callback"
@@ -45,7 +44,7 @@ describe "SAML Overrides Email", type: :request do
     expect(user.username).to eq(initial_username)
   end
 
-  it 'updates username if enabled' do
+  it "updates username if enabled" do
     SiteSetting.saml_omit_username = true
 
     get "/auth/saml/callback"
