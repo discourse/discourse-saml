@@ -104,7 +104,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     end
   end
 
-  def after_authenticate(auth)
+  def after_authenticate(auth, existing_account: nil)
     info = auth.info
 
     extra_data = auth.extra || {}
