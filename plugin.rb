@@ -9,7 +9,7 @@
 
 gem "macaddr", "1.0.0"
 gem "uuid", "2.3.7"
-gem "rexml", "3.2.5"
+gem "rexml", "3.2.6"
 gem "ruby-saml", "1.13.0"
 gem "omniauth-saml", "1.9.0"
 
