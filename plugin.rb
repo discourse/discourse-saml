@@ -53,9 +53,19 @@ after_initialize do
   if !!GlobalSetting.try("saml_target_url")
     # Configured via environment variables. Hide all the site settings
     # from the UI to avoid confusion
+    saml_site_setting_keys = []
+
     SiteSetting.defaults.all.keys.each do |k|
       next if !k.to_s.start_with?("saml_")
-      SiteSetting.hidden_settings << k
+      saml_site_setting_keys << k
+    end
+
+    if SiteSetting.respond_to?(:hidden_settings_provider)
+      register_modifier(:hidden_site_settings) do |hidden|
+        hidden + saml_site_setting_keys
+      end
+    else
+      SiteSetting.hidden_settings.concat(saml_site_setting_keys)
     end
   end
 
