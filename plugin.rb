@@ -61,9 +61,7 @@ after_initialize do
     end
 
     if SiteSetting.respond_to?(:hidden_settings_provider)
-      register_modifier(:hidden_site_settings) do |hidden|
-        hidden + saml_site_setting_keys
-      end
+      register_modifier(:hidden_site_settings) { |hidden| hidden + saml_site_setting_keys }
     else
       SiteSetting.hidden_settings.concat(saml_site_setting_keys)
     end
