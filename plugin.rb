@@ -5,7 +5,6 @@
 # version: 1.0
 # author: Discourse Team
 # url: https://github.com/discourse/discourse-saml
-# transpile_js: true
 
 gem "macaddr", "1.0.0"
 gem "uuid", "2.3.7"
