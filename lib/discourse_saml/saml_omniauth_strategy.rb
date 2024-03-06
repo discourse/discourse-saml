@@ -39,6 +39,8 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
   private
 
   def render_auto_submitted_form(destination:, params:)
+    response_headers = { "content-type" => "text/html" }
+
     submit_script_url =
       UrlHelper.absolute(
         "#{Discourse.base_path}/plugins/discourse-saml/javascripts/submit-form-on-load.js",
@@ -68,12 +70,12 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
               </div>
             </noscript>
           </form>
-          <script src="#{CGI.escapeHTML(submit_script_url)}"></script>
+          <script src="#{CGI.escapeHTML(submit_script_url)}" nonce="#{ContentSecurityPolicy.try(:nonce_placeholder, response_headers)}"></script>
         </body>
       </html>
     HTML
 
-    r = Rack::Response.new(html, 200, { "content-type" => "text/html" })
+    r = Rack::Response.new(html, 200, response_headers)
     r.finish
   end
 end

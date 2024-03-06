@@ -39,11 +39,17 @@ describe "SAML POST-mode functionality", type: :request do
 
     html = Nokogiri.HTML5(response.body)
     script_url = html.at("script").attribute("src").value
+    script_nonce = html.at("script").attribute("nonce").value
 
     csp = response.headers["content-security-policy"]
+
     script_src =
       csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
-    included_in_csp = script_src.any? { |allowed_src| script_url.start_with?(allowed_src) }
+
+    included_in_csp =
+      script_src.any? do |allowed_src|
+        script_url.start_with?(allowed_src) || ("'nonce-#{script_nonce}'" == allowed_src)
+      end
 
     expect(included_in_csp).to eq(true)
   end
@@ -72,11 +78,15 @@ describe "SAML POST-mode functionality", type: :request do
 
     html = Nokogiri.HTML5(response.body)
     script_url = html.at("script").attribute("src").value
+    script_nonce = html.at("script").attribute("nonce").value
 
     csp = response.headers["content-security-policy"]
     script_src =
       csp.split(";").find { |directive| directive.strip.start_with?("script-src") }.split(" ")
-    included_in_csp = script_src.any? { |allowed_src| script_url.start_with?(allowed_src) }
+    included_in_csp =
+      script_src.any? do |allowed_src|
+        script_url.start_with?(allowed_src) || ("'nonce-#{script_nonce}'" == allowed_src)
+      end
 
     expect(included_in_csp).to eq(true)
   end
