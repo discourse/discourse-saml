@@ -145,6 +145,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
       sync_admin(user, attributes)
       sync_trust_level(user, attributes)
       sync_locale(user, attributes)
+      Group.refresh_automatic_groups!(:admins, :moderators, :staff)
     end
 
     result.overrides_username = setting(:omit_username)
@@ -175,6 +176,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     sync_trust_level(user, attributes)
     sync_custom_fields(user, attributes, info)
     sync_locale(user, attributes)
+    Group.refresh_automatic_groups!(:admins, :moderators, :staff)
   end
 
   def auto_create_account(result, uid)

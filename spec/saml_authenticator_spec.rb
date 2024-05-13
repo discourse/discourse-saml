@@ -498,7 +498,10 @@ describe SamlAuthenticator do
       it "user should be a moderator (default param)" do
         hash = auth_hash("isModerator" => [1])
         result = @authenticator.after_authenticate(hash)
-        expect(result.user.moderator).to eq(true)
+        user = result.user
+
+        expect(user.moderator).to eq(true)
+        expect(user.groups.pluck(:name)).to include("moderators", "staff")
       end
 
       it "user should be a moderator (using specified saml_moderator_attribute)" do
@@ -515,7 +518,10 @@ describe SamlAuthenticator do
       it "user should be an admin (default param)" do
         hash = auth_hash("isAdmin" => [1])
         result = @authenticator.after_authenticate(hash)
-        expect(result.user.admin).to eq(true)
+        user = result.user
+
+        expect(user.admin).to eq(true)
+        expect(user.groups.pluck(:name)).to include("admins", "staff")
       end
 
       it "user should be an admin (using specified saml_admin_attribute)" do
