@@ -538,8 +538,15 @@ describe SamlAuthenticator do
       it "user should have trust level 3 (default param)" do
         hash = auth_hash("trustLevel" => [3])
         result = @authenticator.after_authenticate(hash)
-        expect(result.user.trust_level).to eq(3)
-        expect(result.user.manual_locked_trust_level).to eq(3)
+        user = result.user
+
+        expect(user.trust_level).to eq(3)
+        expect(user.manual_locked_trust_level).to eq(3)
+        expect(user.groups.pluck(:name)).to include(
+          "trust_level_1",
+          "trust_level_2",
+          "trust_level_3",
+        )
       end
 
       it "user should have trust level 3 (using specified saml_trust_level_attribute)" do
