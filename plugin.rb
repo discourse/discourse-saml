@@ -8,13 +8,12 @@
 
 gem "macaddr", "1.0.0"
 gem "uuid", "2.3.7"
+gem "ruby-saml", "1.17.0"
 
 if OmniAuth.const_defined?(:AuthenticityTokenProtection) # OmniAuth 2.0
-  gem "ruby-saml", "1.16.0"
-  gem "omniauth-saml", "2.1.0"
+  gem "omniauth-saml", "2.2.1"
 else
-  gem "ruby-saml", "1.13.0"
-  gem "omniauth-saml", "1.9.0"
+  gem "omniauth-saml", "1.10.5"
 end
 
 enabled_site_setting :saml_enabled if !GlobalSetting.try("saml_target_url")
