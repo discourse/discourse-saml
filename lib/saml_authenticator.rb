@@ -78,6 +78,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
         want_assertions_signed: !!setting(:want_assertions_signed),
         logout_requests_signed: !!setting(:logout_requests_signed),
         logout_responses_signed: !!setting(:logout_responses_signed),
+        metadata_signed: !!setting(:metadata_signed),
         signature_method: XMLSecurity::Document::RSA_SHA1,
       },
       idp_slo_session_destroy:

@@ -22,6 +22,7 @@ en:
     saml_want_assertions_signed: Enable Service Provider signatures for Assertions
     saml_logout_requests_signed: Enable Service Provider signatures for SP-initiated logout
     saml_logout_responses_signed: Enable Service Provider signatures for IDP-initiated logout responses
+    saml_metadata_signed: Include a signature element within Service Provider metadata XML
 
     saml_request_attributes: A list of additional attributes which should be fetched from the service provider. `email`, `name`, `first_name`,  and `last_name` are always fetched.
     saml_attribute_statements: Custom mappings of fields to their source SAML attributes. In the format `field:samlAttr1,samlAttr2`.

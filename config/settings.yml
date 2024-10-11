@@ -38,6 +38,7 @@ saml:
   saml_want_assertions_signed: false
   saml_logout_requests_signed: false
   saml_logout_responses_signed: false
+  saml_metadata_signed: false
 
   saml_request_attributes:
     type: list
