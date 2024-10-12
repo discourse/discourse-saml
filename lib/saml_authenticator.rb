@@ -74,7 +74,6 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
       certificate: setting(:sp_certificate).presence,
       private_key: setting(:sp_private_key).presence,
       idp_sso_service_binding: (setting(:request_method)&.downcase == "post") ? :post : :redirect,
-      idp_slo_service_binding: (setting(:request_method)&.downcase == "post") ? :post : :redirect,
       security: {
         authn_requests_signed: !!setting(:authn_requests_signed),
         want_assertions_signed: !!setting(:want_assertions_signed),
