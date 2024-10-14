@@ -54,6 +54,32 @@ describe "SAML POST-mode functionality", type: :request do
     expect(included_in_csp).to eq(true)
   end
 
+  it "embeds keys when enabled and authn requests signed" do
+    SiteSetting.saml_request_method = "POST"
+    SiteSetting.saml_authn_requests_signed = true
+
+    # Generate a temporary key for signing
+    key = OpenSSL::PKey::RSA.new 2048
+    name = OpenSSL::X509::Name.parse "CN=nobody/DC=example"
+    cert = OpenSSL::X509::Certificate.new
+    cert.version = 2
+    cert.serial = 0
+    cert.not_before = Time.now
+    cert.not_after = Time.now + 3600
+    cert.public_key = key.public_key
+    cert.subject = name
+    cert.sign key, OpenSSL::Digest.new("SHA1")
+
+    SiteSetting.saml_sp_private_key = key.to_pem
+    SiteSetting.saml_sp_certificate = cert.to_pem
+    post "/auth/saml"
+    expect(response.status).to eq(200)
+    expect(response.headers["content-type"]).to eq("text/html")
+
+    html = Nokogiri.HTML5(response.body)
+    expect(Base64.decode64(html.at("input").attribute("value").value)).to include("ds:Signature")
+  end
+
   it "works for subfolder" do
     set_subfolder "/forum"
     SiteSetting.saml_request_method = "POST"

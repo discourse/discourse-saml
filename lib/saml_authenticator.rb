@@ -73,12 +73,14 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
       request_method: (setting(:request_method)&.downcase == "post") ? "POST" : "GET",
       certificate: setting(:sp_certificate).presence,
       private_key: setting(:sp_private_key).presence,
+      idp_sso_service_binding: (setting(:request_method)&.downcase == "post") ? :post : :redirect,
       security: {
         authn_requests_signed: !!setting(:authn_requests_signed),
         want_assertions_signed: !!setting(:want_assertions_signed),
         logout_requests_signed: !!setting(:logout_requests_signed),
         logout_responses_signed: !!setting(:logout_responses_signed),
         signature_method: XMLSecurity::Document::RSA_SHA1,
+        digest_method: XMLSecurity::Document::SHA1,
       },
       idp_slo_session_destroy:
         proc do |env, session|
