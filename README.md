@@ -29,6 +29,7 @@ Add the following settings to your `app.yml` file in the Environment Settings se
   ...
   -----END CERTIFICATE-----"
 ```
+Only one of `DISCOURSE_SAML_CERT_FINGERPRINT` or `DISCOURSE_SAML_CERT` needed.
 
 The `DISCOURSE_FULL_SCREEN_LOGIN` option allows the SSO login page to be presented within the main browser window, rather than a popup. If SAML is your only authentication method this can look neater, as when the user clicks the Log In button the login page will follow through within the main browser window rather than opening a pop-up. This setting is commented out by default - if you want full screen login uncomment that line and set the value to true (as per the example above).
 
@@ -48,8 +49,8 @@ Add the following settings to your `discourse.conf` file:
 
 ### Other Supported settings
 
-- `DISCOURSE_SAML_SP_CERTIFICATE`: SAML Service Provider Certificate
-- `DISCOURSE_SAML_SP_PRIVATE_KEY`: SAML Service Provider Private Key
+- `DISCOURSE_SAML_SP_CERTIFICATE`: SAML Service Provider X.509 certificate. Used to sign messages once enabled via the `DISCOURSE_SAML_*_SIGNED` settings
+- `DISCOURSE_SAML_SP_PRIVATE_KEY`: SAML Service Provider X.509 private key. Used to sign messages once enabled via the `DISCOURSE_SAML_*_SIGNED` settings
 - `DISCOURSE_SAML_AUTHN_REQUESTS_SIGNED`: defaults to false
 - `DISCOURSE_SAML_WANT_ASSERTIONS_SIGNED`: defaults to false
 - `DISCOURSE_SAML_LOGOUT_REQUESTS_SIGNED`: defaults to false
