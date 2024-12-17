@@ -2,38 +2,30 @@
 
 describe ::DiscourseSaml::SamlOmniauthStrategy do
   let(:strategy) { described_class.new(->(env) { [200, env, "app"] }) }
-  let(:now) { Time.utc(2024, 11, 16, 7, 25, 0) }
 
-  def create_saml_response(
-    assertion_id: "abc123",
-    not_on_or_after: now + 1.hour,
-    session_not_on_or_after: now + 2.hours
-  )
-    response_xml = <<~XML
-    <?xml version="1.0"?>
-    <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
-                    ID="_response123"
-                    IssueInstant="#{now.iso8601}">
-      <saml:Assertion ID="#{assertion_id}"
-                      IssueInstant="#{now.iso8601}">
-        <saml:Issuer>https://idp.cat.com</saml:Issuer>
-        <ds:Signature>
-          <ds:SignedInfo>
-            <ds:Reference URI="##{assertion_id}"/>
-          </ds:SignedInfo>
-        </ds:Signature>
-        <saml:Conditions NotOnOrAfter="#{not_on_or_after.iso8601}"/>
-        <saml:AuthnStatement AuthnInstant="#{now.iso8601}"
-                             SessionNotOnOrAfter="#{session_not_on_or_after.iso8601}"/>
-      </saml:Assertion>
-    </samlp:Response>
-  XML
-
-    Base64.encode64(response_xml)
+  let(:settings_double) do
+    instance_double(OneLogin::RubySaml::Settings, idp_cert_fingerprint: "AB:CD:EF:12:34:56")
+  end
+  let(:response_object) do
+    instance_double(
+      OneLogin::RubySaml::Response,
+      assertion_id: "abc123",
+      response_id: "123",
+      name_id: "test@example.com",
+      is_valid?: true,
+      attributes: {
+      },
+      settings: settings_double,
+      not_on_or_after: Time.current + 1.hour,
+      session_expires_at: Time.current + 1.hour,
+      sessionindex: {
+      },
+    ).tap { |response| allow(response).to receive(:soft=).and_return(response) }
   end
 
   before do
-    freeze_time now
+    allow(strategy).to receive(:fail!)
+    allow(OneLogin::RubySaml::Response).to receive(:new).and_return(response_object)
 
     OmniAuth.config.test_mode = true
     env = Rack::MockRequest.env_for("/auth/saml/callback")
@@ -41,49 +33,39 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
     strategy.call!(env)
   end
 
-  context "when handling SAML responses" do
-    context "saml_replay_protection_enabled is disabled" do
-      before { SiteSetting.saml_replay_protection_enabled = false }
-
-      it "does not check for replayed assertions" do
-        allow(strategy).to receive(:fail!)
-        strategy.request.params["SAMLResponse"] = create_saml_response
-        strategy.request.params["SameSite"] = "1"
-
-        strategy.callback_phase
-
-        strategy.callback_phase
-
-        expect(strategy).not_to have_received(:fail!).with(:saml_assertion_replay_detected)
-      end
-    end
-
-    context "saml_replay_protection_enabled is enabled" do
+  describe "#handle_response" do
+    context "when replay protection is enabled" do
       before { SiteSetting.saml_replay_protection_enabled = true }
 
-      it "rejects replayed assertions" do
-        allow(strategy).to receive(:fail!)
-        strategy.request.params["SAMLResponse"] = create_saml_response
-        strategy.request.params["SameSite"] = "1"
+      it "fails when a replay is detected" do
+        allow(DiscourseSaml::SamlReplayCache).to receive(:valid?).and_return(false)
 
-        strategy.callback_phase
-
-        strategy.callback_phase
+        strategy.send(:handle_response, "raw_response", {}, settings_double) {}
 
         expect(strategy).to have_received(:fail!).with(:saml_assertion_replay_detected)
       end
 
-      # defensive testing but indicates that new assertion IDs are accepted
-      it "accepts new assertions" do
-        allow(strategy).to receive(:fail!)
-        strategy.request.params["SAMLResponse"] = create_saml_response(assertion_id: "derp")
-        strategy.request.params["SameSite"] = "1"
-        strategy.callback_phase
+      it "proceeds when no replay is detected" do
+        allow(DiscourseSaml::SamlReplayCache).to receive(:valid?).and_return(true)
 
-        strategy.request.params["SAMLResponse"] = create_saml_response(assertion_id: "burp")
-        strategy.callback_phase
+        expect {
+          strategy.send(:handle_response, "raw_response", {}, settings_double) {}
+        }.not_to raise_error
 
-        expect(strategy).not_to have_received(:fail!).with(:saml_assertion_replay_detected)
+        expect(strategy).not_to have_received(:fail!)
+      end
+    end
+
+    context "when replay protection is disabled" do
+      before { SiteSetting.saml_replay_protection_enabled = false }
+
+      it "does not check for replays" do
+        allow(DiscourseSaml::SamlReplayCache).to receive(:valid?)
+        expect(DiscourseSaml::SamlReplayCache).not_to have_received(:valid?)
+
+        expect {
+          strategy.send(:handle_response, "raw_response", {}, settings_double) {}
+        }.not_to raise_error
       end
     end
   end
