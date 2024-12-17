@@ -36,6 +36,23 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
     end
   end
 
+  protected
+
+  def handle_response(raw_response, opts, settings)
+    response = request.params["SAMLResponse"]
+    decoded_response = OneLogin::RubySaml::Response.new(response, settings: settings)
+
+    # replay attack check before doing further response validation
+    if !DiscourseSaml::SamlReplayCache.valid?(decoded_response)
+      Rails.logger.warn(
+        "SAML Debugging: replay attempt detected for ID: #{decoded_response.response_id}, name: #{decoded_response.name_id}",
+      )
+      return fail!(:saml_assertion_replay_detected)
+    end
+
+    super
+  end
+
   private
 
   def render_auto_submitted_form(destination:, params:)
