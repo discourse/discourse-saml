@@ -42,29 +42,49 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
   end
 
   context "when handling SAML responses" do
-    it "rejects replayed assertions" do
-      allow(strategy).to receive(:fail!)
-      strategy.request.params["SAMLResponse"] = create_saml_response
-      strategy.request.params["SameSite"] = "1"
+    context "saml_replay_protection_enabled is disabled" do
+      before { SiteSetting.saml_replay_protection_enabled = false }
 
-      strategy.callback_phase
+      it "does not check for replayed assertions" do
+        allow(strategy).to receive(:fail!)
+        strategy.request.params["SAMLResponse"] = create_saml_response
+        strategy.request.params["SameSite"] = "1"
 
-      strategy.callback_phase
+        strategy.callback_phase
 
-      expect(strategy).to have_received(:fail!).with(:saml_assertion_replay_detected)
+        strategy.callback_phase
+
+        expect(strategy).not_to have_received(:fail!).with(:saml_assertion_replay_detected)
+      end
     end
 
-    # defensive testing but indicates that new assertion IDs are accepted
-    it "accepts new assertions" do
-      allow(strategy).to receive(:fail!)
-      strategy.request.params["SAMLResponse"] = create_saml_response(assertion_id: "derp")
-      strategy.request.params["SameSite"] = "1"
-      strategy.callback_phase
+    context "saml_replay_protection_enabled is enabled" do
+      before { SiteSetting.saml_replay_protection_enabled = true }
 
-      strategy.request.params["SAMLResponse"] = create_saml_response(assertion_id: "burp")
-      strategy.callback_phase
+      it "rejects replayed assertions" do
+        allow(strategy).to receive(:fail!)
+        strategy.request.params["SAMLResponse"] = create_saml_response
+        strategy.request.params["SameSite"] = "1"
 
-      expect(strategy).not_to have_received(:fail!).with(:saml_assertion_replay_detected)
+        strategy.callback_phase
+
+        strategy.callback_phase
+
+        expect(strategy).to have_received(:fail!).with(:saml_assertion_replay_detected)
+      end
+
+      # defensive testing but indicates that new assertion IDs are accepted
+      it "accepts new assertions" do
+        allow(strategy).to receive(:fail!)
+        strategy.request.params["SAMLResponse"] = create_saml_response(assertion_id: "derp")
+        strategy.request.params["SameSite"] = "1"
+        strategy.callback_phase
+
+        strategy.request.params["SAMLResponse"] = create_saml_response(assertion_id: "burp")
+        strategy.callback_phase
+
+        expect(strategy).not_to have_received(:fail!).with(:saml_assertion_replay_detected)
+      end
     end
   end
 end

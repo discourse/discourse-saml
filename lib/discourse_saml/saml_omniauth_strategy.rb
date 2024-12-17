@@ -39,6 +39,8 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
   protected
 
   def handle_response(raw_response, opts, settings)
+    super unless SiteSetting.saml_replay_protection_enabled
+
     response = request.params["SAMLResponse"]
     decoded_response = OneLogin::RubySaml::Response.new(response, settings: settings)
 

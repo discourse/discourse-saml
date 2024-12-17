@@ -87,3 +87,6 @@ saml:
   saml_log_auth: false
   saml_debug_auth: false
   saml_base_url: ""
+  saml_replay_protection_enabled:
+    default: false
+    hidden: true
