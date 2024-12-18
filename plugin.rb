@@ -104,6 +104,7 @@ after_initialize do
 end
 
 require_relative "lib/discourse_saml/saml_omniauth_strategy"
+require_relative "lib/discourse_saml/saml_replay_cache"
 require_relative "lib/saml_authenticator"
 
 # Allow GlobalSettings to override the translations

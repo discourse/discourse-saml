@@ -36,6 +36,21 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
     end
   end
 
+  protected
+
+  def handle_response(raw_response, opts, settings)
+    super do
+      if SiteSetting.saml_replay_protection_enabled && @response_object &&
+           !DiscourseSaml::SamlReplayCache.valid?(@response_object)
+        Rails.logger.warn(
+          "SAML Debugging: replay attempt detected for ID: #{@response_object.response_id}, name: #{@response_object.name_id}",
+        )
+        return fail!(:saml_assertion_replay_detected)
+      end
+      yield
+    end
+  end
+
   private
 
   def render_auto_submitted_form(destination:, params:)
