@@ -8,10 +8,10 @@
 
 gem "macaddr", "1.0.0"
 gem "uuid", "2.3.7"
-gem "ruby-saml", "1.17.0"
+gem "ruby-saml", "1.18.0"
 
 if OmniAuth.const_defined?(:AuthenticityTokenProtection) # OmniAuth 2.0
-  gem "omniauth-saml", "2.2.1"
+  gem "omniauth-saml", "2.2.3"
 else
   gem "omniauth-saml", "1.10.5"
 end
