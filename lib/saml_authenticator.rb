@@ -58,8 +58,8 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   def setup_strategy(strategy)
     strategy.options.deep_merge!(
       issuer: SamlAuthenticator.saml_base_url,
-      idp_sso_target_url: setting(:target_url),
-      idp_slo_target_url: setting(:slo_target_url).presence,
+      idp_sso_service_url: setting(:target_url),
+      idp_slo_service_url: setting(:slo_target_url).presence,
       slo_default_relay_state: SamlAuthenticator.saml_base_url,
       idp_cert_fingerprint: setting(:cert_fingerprint).presence,
       idp_cert_fingerprint_algorithm: setting(:cert_fingerprint_algorithm),
