@@ -474,18 +474,18 @@ describe SamlAuthenticator do
 
         it "adds users to groups based on group's case insensitive full_names" do
           SiteSetting.saml_groups_attribute = "oneAttribute,twoAttribute" # ensure compat
-          SiteSetting.saml_sync_groups_list = [group1.full_name, group3.full_name].join("|") # ensure compat
+          SiteSetting.saml_sync_groups_list = [group1.full_name, group2.full_name].join("|") # ensure compat
 
           hash =
             auth_hash(
-              "oneAttribute" => [group1.full_name, group2.full_name],
-              "twoAttribute" => [group3.full_name.upcase],
+              "oneAttribute" => [group1.full_name, "I don't exist"],
+              "twoAttribute" => [group2.full_name],
             )
 
           result = authenticator.after_authenticate(hash)
           expect(result.user.groups.pluck(:name)).to contain_exactly(
             group1.name,
-            group3.name,
+            group2.name,
             original_group.name,
           )
         end

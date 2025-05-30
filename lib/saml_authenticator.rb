@@ -215,7 +215,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     raw_group_list =
       setting(:groups_attribute).split(",").flat_map { |attr| attributes.multi(attr.strip) || [] }
 
-    user_group_list = raw_group_list.map { |g| g.downcase.split(",") }.flatten
+    user_group_list = raw_group_list.compact.map { |g| g.downcase.split(",") }.flatten
 
     if setting(:groups_ldap_leafcn).present?
       # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
