@@ -330,8 +330,10 @@ describe SamlAuthenticator do
     describe "Group Syncing" do
       fab!(:group1) { Fabricate(:group, name: "uno", full_name: "Group One") }
       fab!(:group2) { Fabricate(:group, name: "dos", full_name: "Group Two") }
-      fab!(:group3) { Fabricate(:group, name: "tres", full_name: "Group Three") }
-      fab!(:original_group) { Fabricate(:group, name: "original_group").tap { |g| g.add(user) } }
+      fab!(:group3) { Fabricate(:group, name: "tres") } # no full name on purpose
+      fab!(:original_group) do
+        Fabricate(:group, name: "original_group", full_name: "The Origin").tap { |g| g.add(user) }
+      end
 
       before { SiteSetting.saml_sync_groups = true }
 
@@ -468,9 +470,12 @@ describe SamlAuthenticator do
       end
 
       describe "saml_groups_use_full_name" do
+        before { SiteSetting.saml_groups_use_full_name = true }
+
         it "adds users to groups based on group's case insensitive full_names" do
-          SiteSetting.saml_groups_attribute = "oneAttribute,twoAttribute"
-          SiteSetting.saml_groups_use_full_name = true
+          SiteSetting.saml_groups_attribute = "oneAttribute,twoAttribute" # ensure compat
+          SiteSetting.saml_sync_groups_list = [group1.full_name, group3.full_name].join("|") # ensure compat
+
           hash =
             auth_hash(
               "oneAttribute" => [group1.full_name, group2.full_name],
@@ -479,11 +484,20 @@ describe SamlAuthenticator do
 
           result = authenticator.after_authenticate(hash)
           expect(result.user.groups.pluck(:name)).to contain_exactly(
-            original_group.name,
             group1.name,
-            group2.name,
             group3.name,
+            original_group.name,
           )
+        end
+
+        it "is compatible with full_sync" do
+          SiteSetting.saml_groups_use_full_name = true
+          SiteSetting.saml_groups_fullsync = true
+
+          hash = auth_hash("memberOf" => [group1.full_name])
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(group1.name)
         end
       end
     end
