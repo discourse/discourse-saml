@@ -1,33 +1,24 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe SamlAuthenticator do
-  Fabricator(:saml_user_info, class_name: :user_associated_account) do
-    provider_name "saml"
-    user
-  end
+  let!(:authenticator) { SamlAuthenticator.new }
+  let!(:uid) { 123_456 }
+
+  fab!(:user)
 
   describe "after_authenticate" do
-    before do
-      @authenticator = SamlAuthenticator.new
-      @uid = 123_456
-      @user = Fabricate(:user)
-    end
-
     def auth_hash(attributes)
-      hash =
-        OmniAuth::AuthHash.new(
-          provider: "saml",
-          uid: @uid,
-          info: {
-            name: "John Doe",
-            email: @user.email,
-          },
-          extra: {
-            raw_info: OneLogin::RubySaml::Attributes.new(attributes),
-          },
-        )
+      OmniAuth::AuthHash.new(
+        provider: "saml",
+        uid:,
+        info: {
+          name: user.name,
+          email: user.email,
+        },
+        extra: {
+          raw_info: OneLogin::RubySaml::Attributes.new(attributes),
+        },
+      )
     end
 
     it "finds user by email" do
@@ -36,59 +27,52 @@ describe SamlAuthenticator do
           provider: "saml",
           uid: "654321",
           info: {
-            name: "John Doe",
-            email: @user.email,
+            name: user.name,
+            email: user.email,
           },
         )
 
-      result = @authenticator.after_authenticate(hash)
-      expect(result.user.email).to eq(@user.email)
+      result = authenticator.after_authenticate(hash)
+      expect(result.user.email).to eq(user.email)
     end
 
     it "finds user by uid" do
-      Fabricate(:saml_user_info, provider_uid: @uid, user: @user)
+      Fabricate(:saml_user_info, provider_uid: uid, user:)
 
       hash =
         OmniAuth::AuthHash.new(
           provider: "saml",
-          uid: @uid,
+          uid:,
           info: {
-            name: "John Doe",
+            name: user.name,
             email: "john_doe@example.com",
           },
         )
 
-      result = @authenticator.after_authenticate(hash)
-      expect(result.user.email).to eq(@user.email)
+      result = authenticator.after_authenticate(hash)
+      expect(result.user.email).to eq(user.email)
       expect(result.email_valid).to eq(true)
     end
 
     it "finds user by email in uid" do
-      Fabricate(:saml_user_info, provider_uid: @uid, user: @user)
+      Fabricate(:saml_user_info, provider_uid: uid, user:)
 
-      hash = OmniAuth::AuthHash.new(provider: "saml", uid: @user.email, info: {})
+      hash = OmniAuth::AuthHash.new(provider: "saml", uid: user.email, info: {})
 
-      result = @authenticator.after_authenticate(hash)
-      expect(result.user).to eq(@user)
+      result = authenticator.after_authenticate(hash)
+      expect(result.user).to eq(user)
     end
 
     it "defaults email_valid to false if saml_default_emails_valid is false" do
       SiteSetting.saml_default_emails_valid = false
 
-      Fabricate(:saml_user_info, provider_uid: @uid, user: @user)
+      Fabricate(:saml_user_info, provider_uid: uid, user:)
 
       hash =
-        OmniAuth::AuthHash.new(
-          provider: "saml",
-          uid: @uid,
-          info: {
-            name: "John Doe",
-            email: @user.email,
-          },
-        )
+        OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name: user.name, email: user.email })
 
-      result = @authenticator.after_authenticate(hash)
-      expect(result.user.email).to eq(@user.email)
+      result = authenticator.after_authenticate(hash)
+      expect(result.user.email).to eq(user.email)
       expect(result.email_valid).to eq(false)
     end
 
@@ -97,8 +81,8 @@ describe SamlAuthenticator do
 
       hash = auth_hash("memberOf" => %w[Customers Employees])
 
-      result = @authenticator.after_authenticate(hash)
-      expect(result.user.email).to eq(@user.email)
+      result = authenticator.after_authenticate(hash)
+      expect(result.user.email).to eq(user.email)
       expect(result.email_valid).to eq(true)
     end
 
@@ -107,7 +91,7 @@ describe SamlAuthenticator do
 
       hash = auth_hash("department" => %w[HR Manager], "title" => ["Senior HR Manager"])
 
-      result = @authenticator.after_authenticate(hash)
+      result = authenticator.after_authenticate(hash)
       SiteSetting
         .saml_request_attributes
         .split("|")
@@ -123,7 +107,7 @@ describe SamlAuthenticator do
 
       hash = auth_hash("department" => %w[HR Manager], "title" => ["Senior HR Manager"])
 
-      result = @authenticator.after_authenticate(hash)
+      result = authenticator.after_authenticate(hash)
       attrs = hash.extra.raw_info
 
       SiteSetting
@@ -141,8 +125,8 @@ describe SamlAuthenticator do
 
       hash = auth_hash("locale" => [user_locale])
 
-      result = @authenticator.after_authenticate(hash)
-      attrs = hash.extra.raw_info.attributes
+      result = authenticator.after_authenticate(hash)
+      hash.extra.raw_info.attributes
 
       expect(result.user.locale).to eq(user_locale)
     end
@@ -152,7 +136,7 @@ describe SamlAuthenticator do
 
       hash = auth_hash("uid" => ["789"])
 
-      @authenticator.after_authenticate(hash)
+      authenticator.after_authenticate(hash)
       expect(UserAssociatedAccount.last.provider_uid).to eq("789")
     end
 
@@ -163,9 +147,8 @@ describe SamlAuthenticator do
         name = "John Doe"
         email = "johndoe@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(provider: "saml", uid: @uid, info: { name: name, email: email })
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, email: email })
+        result = authenticator.after_authenticate(hash)
 
         expect(result.user.name).to eq(name)
         expect(result.user.email).to eq(email)
@@ -173,8 +156,8 @@ describe SamlAuthenticator do
         expect(result.user.active).to eq(true)
         expect(result.user.id).to eq(
           UserAssociatedAccount.find_by(
-            provider_uid: @uid,
-            provider_name: @authenticator.name,
+            provider_uid: uid,
+            provider_name: authenticator.name,
           ).user_id,
         )
       end
@@ -186,17 +169,8 @@ describe SamlAuthenticator do
         name = "john"
         email = "johndoe@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(
-            provider: "saml",
-            uid: @uid,
-            info: {
-              name: name,
-              nickname: nickname,
-              email: email,
-            },
-          )
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, nickname:, email: })
+        result = authenticator.after_authenticate(hash)
 
         expect(result.user.username).to eq(name) # ignores nickname and uses name
       end
@@ -208,17 +182,8 @@ describe SamlAuthenticator do
         name = ""
         email = "johndoe@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(
-            provider: "saml",
-            uid: @uid,
-            info: {
-              name: name,
-              nickname: nickname,
-              email: email,
-            },
-          )
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, nickname:, email: })
+        result = authenticator.after_authenticate(hash)
 
         expect(result.user.username).to eq("johndoe") # "johndoe" was extracted from email
       end
@@ -228,19 +193,10 @@ describe SamlAuthenticator do
         name = ""
         email = "johndoe@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(
-            provider: "saml",
-            uid: @uid,
-            info: {
-              name: name,
-              nickname: nickname,
-              email: email,
-            },
-          )
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, nickname:, email: })
+        result = authenticator.after_authenticate(hash)
 
-        expect(result.user.username).to eq(@uid.to_s) # not "johndoe" that can be extracted from email
+        expect(result.user.username).to eq(uid.to_s) # not "johndoe" that can be extracted from email
       end
 
       it "if name is present uses it for name" do
@@ -248,17 +204,8 @@ describe SamlAuthenticator do
         nickname = "john"
         email = "johnmail@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(
-            provider: "saml",
-            uid: @uid,
-            info: {
-              name: name,
-              nickname: nickname,
-              email: email,
-            },
-          )
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, nickname:, email: })
+        result = authenticator.after_authenticate(hash)
 
         expect(result.user.name).to eq(name)
       end
@@ -268,17 +215,8 @@ describe SamlAuthenticator do
         nickname = "john"
         email = "johnmail@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(
-            provider: "saml",
-            uid: @uid,
-            info: {
-              name: name,
-              nickname: nickname,
-              email: email,
-            },
-          )
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, nickname:, email: })
+        result = authenticator.after_authenticate(hash)
 
         expect(result.user.name).to eq("John")
       end
@@ -288,19 +226,11 @@ describe SamlAuthenticator do
         nickname = ""
         email = "johnmail@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(
-            provider: "saml",
-            uid: @uid,
-            info: {
-              name: name,
-              nickname: nickname,
-              email: email,
-            },
-          )
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, nickname:, email: })
+        result = authenticator.after_authenticate(hash)
 
-        expect(result.user.name).to eq("") # not "mail" extracted from email
+        # not "mail" extracted from email
+        expect(result.user.name).to eq("")
       end
 
       it "uses email as a source for name suggestions if enabled in settings" do
@@ -310,17 +240,8 @@ describe SamlAuthenticator do
         nickname = ""
         email = "johnmail@example.com"
 
-        hash =
-          OmniAuth::AuthHash.new(
-            provider: "saml",
-            uid: @uid,
-            info: {
-              name: name,
-              nickname: nickname,
-              email: email,
-            },
-          )
-        result = @authenticator.after_authenticate(hash)
+        hash = OmniAuth::AuthHash.new(provider: "saml", uid:, info: { name:, nickname:, email: })
+        result = authenticator.after_authenticate(hash)
 
         expect(result.user.name).to eq("Johnmail")
       end
@@ -333,16 +254,16 @@ describe SamlAuthenticator do
       let(:hash) do
         OmniAuth::AuthHash.new(
           provider: "saml",
-          uid: @uid,
+          uid:,
           info: {
-            name: name,
-            email: email,
+            name:,
+            email:,
             nickname: screen_name,
           },
           extra: {
             raw_info:
               OneLogin::RubySaml::Attributes.new(
-                uid: [@uid.to_s.split(",")],
+                uid: [uid.to_s.split(",")],
                 screenName: [screen_name.split(",")],
               ),
           },
@@ -352,143 +273,171 @@ describe SamlAuthenticator do
       it "should be equal to uid" do
         SiteSetting.saml_use_attributes_uid = true
 
-        result = @authenticator.after_authenticate(hash)
-        expect(result.username).to eq(@uid.to_s)
+        result = authenticator.after_authenticate(hash)
+        expect(result.username).to eq(uid.to_s)
       end
 
       it "should be equal to nickname, which omniauth-saml calculated from screenName" do
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         expect(result.username).to eq(screen_name)
       end
     end
 
     describe "name" do
-      let(:name) { "John Doe" }
-      let(:first_name) { "Jane" }
-      let(:last_name) { "Smith" }
-      let(:email) { "johndoe@example.com" }
-      let(:screen_name) { "johndoe" }
-      let(:hash) do
-        OmniAuth::AuthHash.new(
-          provider: "saml",
-          uid: @uid,
-          info: {
-            name: name,
-            email: email,
-            first_name: first_name,
-            last_name: last_name,
-            nickname: screen_name,
-          },
-          extra: {
-            raw_info: {
-              attributes: {
+      it "prefers firstname_lastname" do
+        hash =
+          OmniAuth::AuthHash.new(
+            provider: "saml",
+            uid:,
+            info: {
+              name: "Banana Split",
+              email: "not@used.co",
+              first_name: "Apple",
+              last_name: "Pie",
+            },
+            extra: {
+              raw_info: {
+                attributes: {
+                },
               },
             },
-          },
-        )
-      end
-
-      it "should prefer firstname_lastname" do
-        result = @authenticator.after_authenticate(hash)
-        expect(result.name).to eq("#{first_name} #{last_name}")
-      end
-
-      it "should fallback to `name`" do
-        hash.info.delete(:first_name)
-        hash.info.delete(:last_name)
-        result = @authenticator.after_authenticate(hash)
-        expect(result.name).to eq(name)
-      end
-    end
-
-    describe "sync_groups" do
-      let(:group_names) { %w[group_1 Group_2 GROUP_3 group_4] }
-
-      before do
-        SiteSetting.saml_sync_groups = true
-        @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
-
-        @groups[3].add @user
-        @hash =
-          auth_hash(
-            "memberOf" => group_names[0..1],
-            "groups_to_add" => [group_names[2]],
-            "groups_to_remove" => [group_names[3]],
           )
+        result = authenticator.after_authenticate(hash)
+        expect(result.name).to eq("Apple Pie")
       end
 
-      it "sync users to the given groups" do
-        result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..2].map(&:downcase))
-      end
-
-      it "sync users to the given groups within scope" do
-        SiteSetting.saml_sync_groups_list = group_names[1..3].join("|")
-
-        result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to match_array(group_names[1..2].map(&:downcase))
-      end
-    end
-
-    describe "sync_groups with LDAP leaf cn" do
-      let(:group_names) { %w[group_1 Group_2 GROUP_3 group_4] }
-      let(:group_names_ldap) do
-        %w[
-          cn=group_1,cn=groups,dc=example,dc=com
-          cn=Group_2,cn=groups,dc=example,dc=com
-          cn=GROUP_3,cn=groups,dc=example,dc=com
-          cn=group_4,cn=groups,dc=example,dc=com
-        ]
-      end
-
-      before do
-        SiteSetting.saml_sync_groups = true
-        SiteSetting.saml_groups_ldap_leafcn = true
-        @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
-
-        @groups[3].add @user
-        @hash =
-          auth_hash(
-            "memberOf" => group_names_ldap[0..1],
-            "groups_to_add" => [group_names[2]],
-            "groups_to_remove" => [group_names[3]],
+      it "falls back to name attribute if no first_name and last_name" do
+        hash =
+          OmniAuth::AuthHash.new(
+            provider: "saml",
+            uid:,
+            info: {
+              name: "Banana Split",
+              email: "not@used.co",
+            },
+            extra: {
+              raw_info: {
+                attributes: {
+                },
+              },
+            },
           )
-      end
-
-      it "sync users to the given groups" do
-        result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..2].map(&:downcase))
-      end
-
-      it "sync users to the given groups within scope" do
-        SiteSetting.saml_sync_groups_list = group_names[1..3].join("|")
-
-        result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to match_array(group_names[1..2].map(&:downcase))
+        result = authenticator.after_authenticate(hash)
+        expect(result.name).to eq("Banana Split")
       end
     end
 
-    describe "sync_groups with fullsync" do
-      let(:group_names) { %w[group_1 Group_2 GROUP_3 group_4] }
+    describe "Group Syncing" do
+      fab!(:group1) { Fabricate(:group, name: "uno", full_name: "Group One") }
+      fab!(:group2) { Fabricate(:group, name: "dos", full_name: "Group Two") }
+      fab!(:group3) { Fabricate(:group, name: "tres", full_name: "Group Three") }
+      fab!(:original_group) { Fabricate(:group, name: "original_group").tap { |g| g.add(user) } }
 
-      before do
-        SiteSetting.saml_sync_groups = true
-        SiteSetting.saml_groups_fullsync = true
-        @groups = group_names.map { |name| Fabricate(:group, name: name.downcase) }
+      before { SiteSetting.saml_sync_groups = true }
 
-        @hash = auth_hash("memberOf" => group_names[0..1])
+      describe "sync_groups" do
+        it "sync users to the given groups" do
+          hash =
+            auth_hash(
+              "memberOf" => [group1.name, group2.name],
+              "groups_to_add" => [group3.name],
+              "groups_to_remove" => [original_group.name],
+            )
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            group1.name,
+            group2.name,
+            group3.name,
+          )
+        end
+
+        it "sync users to the given groups within scope" do
+          SiteSetting.saml_sync_groups_list = [group2.name, group3.name, original_group.name].join(
+            "|",
+          )
+          hash =
+            auth_hash(
+              "memberOf" => [group1.name, group2.name],
+              "groups_to_add" => [group3.name],
+              "groups_to_remove" => [original_group.name],
+            )
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(group2.name, group3.name)
+        end
       end
 
-      it "full sync with a user who has no group membership currently" do
-        result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..1].map(&:downcase))
+      describe "sync_groups with LDAP leaf cn" do
+        let!(:group1_ldap) { "cn=#{group1.name},cn=groups,dc=example,dc=com" }
+        let!(:group2_ldap) { "cn=#{group2.name},cn=groups,dc=example,dc=com" }
+        let!(:group3_ldap) { "cn=#{group3.name},cn=groups,dc=example,dc=com" }
+        let!(:original_group_ldap) { "cn=#{original_group.name},cn=groups,dc=example,dc=com" }
+
+        before { SiteSetting.saml_groups_ldap_leafcn = true }
+
+        it "sync users to the given ldap groups in `memberOf`" do
+          hash =
+            auth_hash(
+              "memberOf" => [group1_ldap, group2_ldap],
+              "groups_to_add" => [group3.name],
+              "groups_to_remove" => [original_group.name],
+            )
+
+          expect(user.groups.pluck(:name)).to contain_exactly(original_group.name)
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            group1.name,
+            group2.name,
+            group3.name,
+          )
+        end
+
+        it "sync users to the groups within scope" do
+          SiteSetting.saml_sync_groups_list = [group2.name, group3.name, original_group.name].join(
+            "|",
+          )
+
+          hash =
+            auth_hash(
+              "memberOf" => [group1_ldap, group2_ldap],
+              "groups_to_add" => [group3.name],
+              "groups_to_remove" => [original_group.name],
+            )
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(group2.name, group3.name)
+        end
       end
 
-      it "sync users to the given groups" do
-        @groups[0].add @user
-        @groups[3].add @user
-        result = @authenticator.after_authenticate(@hash)
-        expect(result.user.groups.pluck(:name)).to match_array(group_names[0..1].map(&:downcase))
+      describe "sync_groups with fullsync" do
+        let(:group_names) { %w[uno dos tres original] }
+
+        before { SiteSetting.saml_groups_fullsync = true }
+
+        it "full sync with a user who has no group membership currently" do
+          hash = auth_hash("memberOf" => [group1.name, group2.name])
+
+          result = authenticator.after_authenticate(hash)
+
+          expect(result.user.groups.pluck(:name)).to contain_exactly(group1.name, group2.name)
+        end
+
+        it "full sync, ignoring values in group list and groups_to_add/groups_to_remove" do
+          SiteSetting.saml_sync_groups_list = [group2.name, group3.name].join("|")
+
+          hash =
+            auth_hash(
+              "memberOf" => [group1.name, group2.name],
+              "groups_to_add" => [original_group.name],
+              "groups_to_remove" => [group3.name],
+            )
+
+          result = authenticator.after_authenticate(hash)
+
+          expect(result.user.groups.pluck(:name)).to contain_exactly(group1.name, group2.name)
+        end
       end
     end
 
@@ -497,7 +446,7 @@ describe SamlAuthenticator do
 
       it "user should be a moderator (default param)" do
         hash = auth_hash("isModerator" => [1])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         user = result.user
 
         expect(user.moderator).to eq(true)
@@ -507,7 +456,7 @@ describe SamlAuthenticator do
       it "user should be a moderator (using specified saml_moderator_attribute)" do
         SiteSetting.saml_moderator_attribute = "is_a_moderator"
         hash = auth_hash("is_a_moderator" => ["true"])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         expect(result.user.moderator).to eq(true)
       end
     end
@@ -517,7 +466,7 @@ describe SamlAuthenticator do
 
       it "user should be an admin (default param)" do
         hash = auth_hash("isAdmin" => [1])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         user = result.user
 
         expect(user.admin).to eq(true)
@@ -527,7 +476,7 @@ describe SamlAuthenticator do
       it "user should be an admin (using specified saml_admin_attribute)" do
         SiteSetting.saml_admin_attribute = "is_an_admin"
         hash = auth_hash("is_an_admin" => ["true"])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         expect(result.user.admin).to eq(true)
       end
     end
@@ -537,7 +486,7 @@ describe SamlAuthenticator do
 
       it "user should have trust level 3 (default param)" do
         hash = auth_hash("trustLevel" => [3])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         user = result.user
 
         expect(user.trust_level).to eq(3)
@@ -552,64 +501,63 @@ describe SamlAuthenticator do
       it "user should have trust level 3 (using specified saml_trust_level_attribute)" do
         SiteSetting.saml_trust_level_attribute = "my_trust_level"
         hash = auth_hash("my_trust_level" => ["3"])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         expect(result.user.trust_level).to eq(3)
         expect(result.user.manual_locked_trust_level).to eq(3)
       end
 
       it "user should get lower trust level" do
-        @user.trust_level = 4
+        user.trust_level = 4
         hash = auth_hash("trustLevel" => [1])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         expect(result.user.trust_level).to eq(1)
         expect(result.user.manual_locked_trust_level).to eq(1)
       end
 
       it "invalid trust levels should not be used" do
-        @user.trust_level = 1
+        user.trust_level = 1
         hash = auth_hash("trustLevel" => [15])
-        result = @authenticator.after_authenticate(hash)
+        result = authenticator.after_authenticate(hash)
         expect(result.user.trust_level).to eq(1)
       end
     end
 
     describe "global setting" do
       it "matches request_attributes count" do
-        expect(@authenticator.request_attributes.count).to eq(4)
+        expect(authenticator.request_attributes.count).to eq(4)
 
         SiteSetting.saml_request_attributes = "company_name|mobile_number|name"
-        expect(@authenticator.request_attributes.count).to eq(6)
+        expect(authenticator.request_attributes.count).to eq(6)
       end
 
       it "matches attribute_statements count" do
-        expect(@authenticator.attribute_statements.count).to eq(5)
+        expect(authenticator.attribute_statements.count).to eq(5)
 
         SiteSetting.saml_attribute_statements = "email:emailAddress|company|name"
-        expect(@authenticator.attribute_statements.count).to eq(5)
-        expect(@authenticator.attribute_statements["email"]).to eq(%w[email mail emailAddress])
+        expect(authenticator.attribute_statements.count).to eq(5)
+        expect(authenticator.attribute_statements["email"]).to eq(%w[email mail emailAddress])
 
         SiteSetting.saml_attribute_statements =
           "company_name:company,business|phone:mobile,contact_no"
-        expect(@authenticator.attribute_statements.count).to eq(7)
+        expect(authenticator.attribute_statements.count).to eq(7)
       end
     end
 
     describe "after_create_account" do
-      let(:group) { Fabricate(:group) }
-      let(:auth_hash) do
-        OmniAuth::AuthHash.new(provider: "saml", uid: "123", info: { groups_to_add: group.name })
-      end
+      fab!(:group)
 
       it "adds to group" do
         SiteSetting.saml_sync_groups = true
         authenticator = SamlAuthenticator.new
+        auth_hash =
+          OmniAuth::AuthHash.new(provider: "saml", uid: "123", info: { groups_to_add: group.name })
 
         result = authenticator.after_authenticate(auth_hash)
 
         user = Fabricate(:user, email: "realgoogleuser@gmail.com")
 
         session_data = result.session_data
-        after_create_result = Auth::Result.from_session_data(session_data, user: user)
+        after_create_result = Auth::Result.from_session_data(session_data, user:)
 
         authenticator.after_create_account(user, after_create_result)
 
