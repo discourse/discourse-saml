@@ -209,8 +209,13 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     return if setting(:sync_groups).blank?
 
     groups_fullsync = setting(:groups_fullsync)
-    raw_group_list = attributes.multi(setting(:groups_attribute)) || []
-    user_group_list = raw_group_list.map { |g| g.downcase.split(",") }.flatten
+    use_full_name = setting(:groups_use_full_name)
+    group_match_column = use_full_name ? "full_name" : "name"
+
+    raw_group_list =
+      setting(:groups_attribute).split(",").flat_map { |attr| attributes.multi(attr.strip) || [] }
+
+    user_group_list = raw_group_list.compact.map { |g| g.downcase.split(",") }.flatten
 
     if setting(:groups_ldap_leafcn).present?
       # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
@@ -218,7 +223,9 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     end
 
     if groups_fullsync
-      user_has_groups = user.groups.where(automatic: false).pluck(:name).map(&:downcase)
+      user_has_groups =
+        user.groups.where(automatic: false).pluck(group_match_column).compact.map(&:downcase)
+
       groups_to_add = user_group_list - user_has_groups
       groups_to_remove = user_has_groups - user_group_list if user_has_groups.present?
     else
@@ -244,11 +251,11 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     return if user_group_list.blank? && groups_to_add.blank? && groups_to_remove.blank?
 
     Group
-      .where("LOWER(name) IN (?) AND NOT automatic", groups_to_add)
+      .where("LOWER(#{group_match_column}) IN (?) AND NOT automatic", groups_to_add)
       .each { |group| group.add user }
 
     Group
-      .where("LOWER(name) IN (?) AND NOT automatic", groups_to_remove)
+      .where("LOWER(#{group_match_column}) IN (?) AND NOT automatic", groups_to_remove)
       .each { |group| group.remove user }
   end
 
