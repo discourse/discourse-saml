@@ -248,7 +248,7 @@ describe SamlAuthenticator do
     end
 
     describe "username" do
-      let(:name) { user.name }
+      let(:name) { "John Doe" }
       let(:email) { "johndoe@example.com" }
       let(:screen_name) { "johndoe" }
       let(:hash) do
