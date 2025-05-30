@@ -439,6 +439,53 @@ describe SamlAuthenticator do
           expect(result.user.groups.pluck(:name)).to contain_exactly(group1.name, group2.name)
         end
       end
+
+      describe "saml_groups_attribute" do
+        it "syncs groups from the environment variable" do
+          SiteSetting.saml_groups_attribute = "notTheDefault"
+          hash = auth_hash("notTheDefault" => [group1.name, group2.name])
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            original_group.name,
+            group1.name,
+            group2.name,
+          )
+        end
+
+        it "allows the attribute to specify an array, and assigns groups from those attributes" do
+          SiteSetting.saml_groups_attribute = "Country,Hemisphere"
+          hash = auth_hash("Country" => [group1.name, group2.name], "Hemisphere" => [group3.name])
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            original_group.name,
+            group1.name,
+            group2.name,
+            group3.name,
+          )
+        end
+      end
+
+      describe "saml_groups_use_full_name" do
+        it "adds users to groups based on group's case insensitive full_names" do
+          SiteSetting.saml_groups_attribute = "oneAttribute,twoAttribute"
+          SiteSetting.saml_groups_use_full_name = true
+          hash =
+            auth_hash(
+              "oneAttribute" => [group1.full_name, group2.full_name],
+              "twoAttribute" => [group3.full_name.upcase],
+            )
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            original_group.name,
+            group1.name,
+            group2.name,
+            group3.name,
+          )
+        end
+      end
     end
 
     describe "set moderator" do
