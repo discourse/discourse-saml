@@ -32,8 +32,6 @@ describe SamlAuthenticator do
           },
         )
 
-      puts user.name
-
       result = authenticator.after_authenticate(hash)
       expect(result.user.email).to eq(user.email)
     end
