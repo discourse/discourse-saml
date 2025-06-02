@@ -114,6 +114,8 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
 
     auth[:uid] = attributes.single("uid") || auth[:uid] if setting(:use_attributes_uid)
     uid = auth[:uid]
+    previous_attributes =
+      UserAssociatedAccount.find_by(provider_name: name, provider_uid: uid)&.extra
 
     auth.info[:email] ||= uid if uid.to_s&.include?("@")
 
@@ -141,7 +143,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
         result.email_valid
     else
       user = result.user
-      sync_groups(user, attributes, info)
+      sync_groups(user, attributes, info, previous_attributes)
       sync_custom_fields(user, attributes, info)
       sync_moderator(user, attributes)
       sync_admin(user, attributes)
@@ -205,58 +207,69 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     end
   end
 
-  def sync_groups(user, attributes, info)
+  def sync_groups(user, attributes, info, previous_attributes = nil)
     return if setting(:sync_groups).blank?
 
     groups_fullsync = setting(:groups_fullsync)
-    use_full_name = setting(:groups_use_full_name)
-    group_match_column = use_full_name ? "full_name" : "name"
+    groups_attributes = setting(:groups_attribute).split(",")
+    group_match_column = setting(:groups_use_full_name) ? "full_name" : "name"
 
-    raw_group_list =
-      setting(:groups_attribute).split(",").flat_map { |attr| attributes.multi(attr.strip) || [] }
-
-    user_group_list = raw_group_list.compact.map { |g| g.downcase.split(",") }.flatten
+    groups_attributes_groups =
+      groups_attributes
+        .flat_map { |attr| attributes.multi(attr.strip) || [] }
+        .compact
+        .map { |g| g.downcase.split(",") }
+        .flatten
+        .uniq
 
     if setting(:groups_ldap_leafcn).present?
       # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
-      user_group_list = user_group_list.map { |group| group.split("=", 2).last }
+      groups_attributes_groups = groups_attributes_groups.map { |group| group.split("=", 2).last }
     end
 
     if groups_fullsync
       user_has_groups =
         user.groups.where(automatic: false).pluck(group_match_column).compact.map(&:downcase)
 
-      groups_to_add = user_group_list - user_has_groups
-      groups_to_remove = user_has_groups - user_group_list if user_has_groups.present?
+      groups_to_add = groups_attributes_groups - user_has_groups
+      groups_to_remove = user_has_groups - groups_attributes_groups if user_has_groups.present?
     else
-      total_group_list = setting(:sync_groups_list).split("|").map(&:downcase)
+      groups_allowlist = setting(:sync_groups_list).split("|").map(&:downcase)
 
       groups_to_add = info["groups_to_add"] || attributes.multi("groups_to_add")&.join(",") || ""
       groups_to_add = groups_to_add.downcase.split(",")
-      groups_to_add += user_group_list
+      groups_to_add += groups_attributes_groups
 
       groups_to_remove =
         info["groups_to_remove"] || attributes.multi("groups_to_remove")&.join(",") || ""
       groups_to_remove = groups_to_remove.downcase.split(",")
 
-      if total_group_list.present?
-        groups_to_add = total_group_list & groups_to_add
+      existing_groups_from_groups_attribute =
+        get_existing_associated_account_groups(user:, groups_attributes:, previous_attributes:)
+      groups_to_remove += (existing_groups_from_groups_attribute - groups_attributes_groups)
+
+      if groups_allowlist.present?
+        groups_to_add = groups_allowlist & groups_to_add
 
         removable_groups = groups_to_remove.dup
-        groups_to_remove = total_group_list - groups_to_add
+        groups_to_remove = groups_allowlist - groups_to_add
         groups_to_remove &= removable_groups if removable_groups.present?
       end
     end
 
-    return if user_group_list.blank? && groups_to_add.blank? && groups_to_remove.blank?
+    return if groups_to_add.blank? && groups_to_remove.blank?
 
-    Group
-      .where("LOWER(#{group_match_column}) IN (?) AND NOT automatic", groups_to_add)
-      .each { |group| group.add user }
+    if groups_to_add.present?
+      Group
+        .where("LOWER(#{group_match_column}) IN (?) AND NOT automatic", groups_to_add)
+        .each { |group| group.add user }
+    end
 
-    Group
-      .where("LOWER(#{group_match_column}) IN (?) AND NOT automatic", groups_to_remove)
-      .each { |group| group.remove user }
+    if groups_to_remove.present?
+      Group
+        .where("LOWER(#{group_match_column}) IN (?) AND NOT automatic", groups_to_remove)
+        .each { |group| group.remove user }
+    end
   end
 
   def sync_custom_fields(user, attributes, info)
@@ -361,6 +374,16 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   end
 
   private
+
+  def get_existing_associated_account_groups(user:, groups_attributes:, previous_attributes: nil)
+    return [] unless previous_attributes.is_a?(Hash)
+
+    groups_attributes
+      .flat_map { |attr| Array(previous_attributes.dig("raw_info", attr)) }
+      .compact
+      .uniq
+      .map(&:downcase)
+  end
 
   def idp_cert_multi
     return if setting(:cert_multi).blank?

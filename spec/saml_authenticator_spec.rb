@@ -443,7 +443,7 @@ describe SamlAuthenticator do
       end
 
       describe "saml_groups_attribute" do
-        it "syncs groups from the environment variable" do
+        it "syncs groups from the saml_groups_attribute setting" do
           SiteSetting.saml_groups_attribute = "notTheDefault"
           hash = auth_hash("notTheDefault" => [group1.name, group2.name])
 
@@ -453,6 +453,37 @@ describe SamlAuthenticator do
             group1.name,
             group2.name,
           )
+        end
+
+        it "removes groups from the previously saved saml_groups_attributes in raw_info" do
+          SiteSetting.saml_groups_attribute = "notTheDefault"
+
+          # user's existing group associations and user_associated_account
+          group1.add(user)
+          user.user_associated_accounts.create!(
+            provider_name: "saml",
+            provider_uid: uid,
+            user:,
+            extra: {
+              raw_info: {
+                "memberOf" => [group3.name], # this is ignored as it is not the correct attribute
+                "notTheDefault" => [group1.name], # this is the correct attribute
+              },
+            },
+          )
+
+          # new auth hash with a different group
+          hash = auth_hash("notTheDefault" => [group2.name])
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            # group1 should be removed
+            original_group.name,
+            group2.name,
+          )
+        end
+
+        it "functions correctly even with no prior user_associated_account" do
         end
 
         it "allows the attribute to specify an array, and assigns groups from those attributes" do
