@@ -59,7 +59,9 @@ saml:
 
   saml_sync_groups: false
   saml_groups_fullsync: false
-  saml_groups_attribute: "memberOf"
+  saml_groups_attribute:
+    type: list
+    default: "memberOf"
   saml_groups_use_full_name: false
   saml_groups_ldap_leafcn: false
   saml_sync_groups_list:
