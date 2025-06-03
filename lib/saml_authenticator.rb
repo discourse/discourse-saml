@@ -214,7 +214,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     groups_attributes = setting(:groups_attribute).split(",")
     group_match_column = setting(:groups_use_full_name) ? "full_name" : "name"
 
-    groups_attributes_groups =
+    groups_from_groups_attributes =
       groups_attributes
         .flat_map { |attr| attributes.multi(attr.strip) || [] }
         .compact
@@ -224,30 +224,30 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
 
     if setting(:groups_ldap_leafcn).present?
       # Change cn=groupname,cn=groups,dc=example,dc=com to groupname
-      groups_attributes_groups = groups_attributes_groups.map { |group| group.split("=", 2).last }
+      groups_from_groups_attributes =
+        groups_from_groups_attributes.map { |group| group.split("=", 2).last }
     end
 
     if groups_fullsync
       user_has_groups =
         user.groups.where(automatic: false).pluck(group_match_column).compact.map(&:downcase)
 
-      groups_to_add = groups_attributes_groups - user_has_groups
-      groups_to_remove = user_has_groups - groups_attributes_groups if user_has_groups.present?
+      groups_to_add = groups_from_groups_attributes - user_has_groups
+      groups_to_remove = user_has_groups - groups_from_groups_attributes if user_has_groups.present?
     else
-      groups_allowlist = setting(:sync_groups_list).split("|").map(&:downcase)
-
       groups_to_add = info["groups_to_add"] || attributes.multi("groups_to_add")&.join(",") || ""
       groups_to_add = groups_to_add.downcase.split(",")
-      groups_to_add += groups_attributes_groups
+      groups_to_add += groups_from_groups_attributes
 
       groups_to_remove =
         info["groups_to_remove"] || attributes.multi("groups_to_remove")&.join(",") || ""
       groups_to_remove = groups_to_remove.downcase.split(",")
 
-      existing_groups_from_groups_attribute =
-        get_existing_associated_account_groups(user:, groups_attributes:, previous_attributes:)
-      groups_to_remove += (existing_groups_from_groups_attribute - groups_attributes_groups)
+      groups_from_attributes_before_sync =
+        get_groups_from_attributes(user:, groups_attributes:, previous_attributes:)
+      groups_to_remove += (groups_from_attributes_before_sync - groups_from_groups_attributes)
 
+      groups_allowlist = setting(:sync_groups_list).split("|").map(&:downcase)
       if groups_allowlist.present?
         groups_to_add = groups_allowlist & groups_to_add
 
@@ -375,7 +375,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
 
   private
 
-  def get_existing_associated_account_groups(user:, groups_attributes:, previous_attributes: nil)
+  def get_groups_from_attributes(user:, groups_attributes:, previous_attributes: nil)
     return [] unless previous_attributes.is_a?(Hash)
 
     groups_attributes
