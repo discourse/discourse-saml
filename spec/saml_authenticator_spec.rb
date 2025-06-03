@@ -330,8 +330,10 @@ describe SamlAuthenticator do
     describe "Group Syncing" do
       fab!(:group1) { Fabricate(:group, name: "uno", full_name: "Group One") }
       fab!(:group2) { Fabricate(:group, name: "dos", full_name: "Group Two") }
-      fab!(:group3) { Fabricate(:group, name: "tres", full_name: "Group Three") }
-      fab!(:original_group) { Fabricate(:group, name: "original_group").tap { |g| g.add(user) } }
+      fab!(:group_without_fullname) { Fabricate(:group, name: "tres") }
+      fab!(:original_group) do
+        Fabricate(:group, name: "original_group", full_name: "The Origin").tap { |g| g.add(user) }
+      end
 
       before { SiteSetting.saml_sync_groups = true }
 
@@ -340,7 +342,7 @@ describe SamlAuthenticator do
           hash =
             auth_hash(
               "memberOf" => [group1.name, group2.name],
-              "groups_to_add" => [group3.name],
+              "groups_to_add" => [group_without_fullname.name],
               "groups_to_remove" => [original_group.name],
             )
 
@@ -348,30 +350,37 @@ describe SamlAuthenticator do
           expect(result.user.groups.pluck(:name)).to contain_exactly(
             group1.name,
             group2.name,
-            group3.name,
+            group_without_fullname.name,
           )
         end
 
         it "sync users to the given groups within scope" do
-          SiteSetting.saml_sync_groups_list = [group2.name, group3.name, original_group.name].join(
-            "|",
-          )
+          SiteSetting.saml_sync_groups_list = [
+            group2.name,
+            group_without_fullname.name,
+            original_group.name,
+          ].join("|")
           hash =
             auth_hash(
               "memberOf" => [group1.name, group2.name],
-              "groups_to_add" => [group3.name],
+              "groups_to_add" => [group_without_fullname.name],
               "groups_to_remove" => [original_group.name],
             )
 
           result = authenticator.after_authenticate(hash)
-          expect(result.user.groups.pluck(:name)).to contain_exactly(group2.name, group3.name)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            group2.name,
+            group_without_fullname.name,
+          )
         end
       end
 
       describe "sync_groups with LDAP leaf cn" do
         let!(:group1_ldap) { "cn=#{group1.name},cn=groups,dc=example,dc=com" }
         let!(:group2_ldap) { "cn=#{group2.name},cn=groups,dc=example,dc=com" }
-        let!(:group3_ldap) { "cn=#{group3.name},cn=groups,dc=example,dc=com" }
+        let!(:group_without_fullname_ldap) do
+          "cn=#{group_without_fullname.name},cn=groups,dc=example,dc=com"
+        end
         let!(:original_group_ldap) { "cn=#{original_group.name},cn=groups,dc=example,dc=com" }
 
         before { SiteSetting.saml_groups_ldap_leafcn = true }
@@ -380,7 +389,7 @@ describe SamlAuthenticator do
           hash =
             auth_hash(
               "memberOf" => [group1_ldap, group2_ldap],
-              "groups_to_add" => [group3.name],
+              "groups_to_add" => [group_without_fullname.name],
               "groups_to_remove" => [original_group.name],
             )
 
@@ -390,24 +399,29 @@ describe SamlAuthenticator do
           expect(result.user.groups.pluck(:name)).to contain_exactly(
             group1.name,
             group2.name,
-            group3.name,
+            group_without_fullname.name,
           )
         end
 
         it "sync users to the groups within scope" do
-          SiteSetting.saml_sync_groups_list = [group2.name, group3.name, original_group.name].join(
-            "|",
-          )
+          SiteSetting.saml_sync_groups_list = [
+            group2.name,
+            group_without_fullname.name,
+            original_group.name,
+          ].join("|")
 
           hash =
             auth_hash(
               "memberOf" => [group1_ldap, group2_ldap],
-              "groups_to_add" => [group3.name],
+              "groups_to_add" => [group_without_fullname.name],
               "groups_to_remove" => [original_group.name],
             )
 
           result = authenticator.after_authenticate(hash)
-          expect(result.user.groups.pluck(:name)).to contain_exactly(group2.name, group3.name)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            group2.name,
+            group_without_fullname.name,
+          )
         end
       end
 
@@ -425,18 +439,109 @@ describe SamlAuthenticator do
         end
 
         it "full sync, ignoring values in group list and groups_to_add/groups_to_remove" do
-          SiteSetting.saml_sync_groups_list = [group2.name, group3.name].join("|")
+          SiteSetting.saml_sync_groups_list = [group2.name, group_without_fullname.name].join("|")
 
           hash =
             auth_hash(
               "memberOf" => [group1.name, group2.name],
               "groups_to_add" => [original_group.name],
-              "groups_to_remove" => [group3.name],
+              "groups_to_remove" => [group_without_fullname.name],
             )
 
           result = authenticator.after_authenticate(hash)
 
           expect(result.user.groups.pluck(:name)).to contain_exactly(group1.name, group2.name)
+        end
+      end
+
+      describe "saml_groups_attribute" do
+        it "syncs groups from the saml_groups_attribute setting" do
+          SiteSetting.saml_groups_attribute = "notTheDefault"
+          hash = auth_hash("notTheDefault" => [group1.name, group2.name])
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            original_group.name,
+            group1.name,
+            group2.name,
+          )
+        end
+
+        it "removes groups from the previously saved saml_groups_attributes in raw_info" do
+          SiteSetting.saml_groups_attribute = "notTheDefault"
+
+          # user's existing group associations and user_associated_account
+          group1.add(user)
+          user.user_associated_accounts.create!(
+            provider_name: "saml",
+            provider_uid: uid,
+            user:,
+            extra: {
+              raw_info: {
+                "memberOf" => [group_without_fullname.name], # this is ignored as it is not the correct attribute
+                "notTheDefault" => [group1.name], # this is the correct attribute
+              },
+            },
+          )
+
+          # new auth hash with a different group
+          hash = auth_hash("notTheDefault" => [group2.name])
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            # group1 should be removed
+            original_group.name,
+            group2.name,
+          )
+        end
+
+        it "allows the attribute to specify an array, and assigns groups from those attributes" do
+          SiteSetting.saml_groups_attribute = "Country|Hemisphere"
+          hash =
+            auth_hash(
+              "Country" => [group1.name, group2.name],
+              "Hemisphere" => [group_without_fullname.name],
+            )
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            original_group.name,
+            group1.name,
+            group2.name,
+            group_without_fullname.name,
+          )
+        end
+      end
+
+      describe "saml_groups_use_full_name" do
+        before { SiteSetting.saml_groups_use_full_name = true }
+
+        it "adds users to groups based on group's case insensitive full_names" do
+          SiteSetting.saml_groups_attribute = "oneAttribute|twoAttribute" # ensure compat
+          SiteSetting.saml_sync_groups_list = [group1.full_name, group2.full_name].join("|") # ensure compat
+
+          hash =
+            auth_hash(
+              "oneAttribute" => [group1.full_name.upcase, "I don't exist"],
+              "twoAttribute" => [group2.full_name],
+            )
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(
+            group1.name,
+            group2.name,
+            original_group.name,
+          )
+        end
+
+        it "is compatible with full_sync" do
+          SiteSetting.saml_groups_use_full_name = true
+          SiteSetting.saml_groups_fullsync = true
+
+          hash = auth_hash("memberOf" => [group1.full_name])
+
+          result = authenticator.after_authenticate(hash)
+          expect(result.user.groups.pluck(:name)).to contain_exactly(group1.name)
         end
       end
     end
