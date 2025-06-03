@@ -495,9 +495,6 @@ describe SamlAuthenticator do
           )
         end
 
-        it "functions correctly even with no prior user_associated_account" do
-        end
-
         it "allows the attribute to specify an array, and assigns groups from those attributes" do
           SiteSetting.saml_groups_attribute = "Country|Hemisphere"
           hash =
@@ -525,7 +522,7 @@ describe SamlAuthenticator do
 
           hash =
             auth_hash(
-              "oneAttribute" => [group1.full_name, "I don't exist"],
+              "oneAttribute" => [group1.full_name.upcase, "I don't exist"],
               "twoAttribute" => [group2.full_name],
             )
 
