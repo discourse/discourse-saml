@@ -487,7 +487,7 @@ describe SamlAuthenticator do
         end
 
         it "allows the attribute to specify an array, and assigns groups from those attributes" do
-          SiteSetting.saml_groups_attribute = "Country,Hemisphere"
+          SiteSetting.saml_groups_attribute = "Country|Hemisphere"
           hash = auth_hash("Country" => [group1.name, group2.name], "Hemisphere" => [group3.name])
 
           result = authenticator.after_authenticate(hash)
@@ -504,7 +504,7 @@ describe SamlAuthenticator do
         before { SiteSetting.saml_groups_use_full_name = true }
 
         it "adds users to groups based on group's case insensitive full_names" do
-          SiteSetting.saml_groups_attribute = "oneAttribute,twoAttribute" # ensure compat
+          SiteSetting.saml_groups_attribute = "oneAttribute|twoAttribute" # ensure compat
           SiteSetting.saml_sync_groups_list = [group1.full_name, group2.full_name].join("|") # ensure compat
 
           hash =

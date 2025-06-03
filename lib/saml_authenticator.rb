@@ -211,7 +211,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     return if setting(:sync_groups).blank?
 
     groups_fullsync = setting(:groups_fullsync)
-    groups_attributes = setting(:groups_attribute).split(",")
+    groups_attributes = setting(:groups_attribute).split("|")
     group_match_column = setting(:groups_use_full_name) ? "full_name" : "name"
 
     groups_from_groups_attributes =
