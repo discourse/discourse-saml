@@ -36,6 +36,12 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
     end
   end
 
+  def extra
+    # extra[:response_object] contains a field `document` which breaks the to_json call in OmniAuthCallbacksController.persist_auth_token
+    # with a SystemStackError. We don't actually use extra[:response_object] anywhere so just exclude it
+    super.except(:response_object)
+  end
+
   protected
 
   def handle_response(raw_response, opts, settings)
