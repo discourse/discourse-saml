@@ -93,3 +93,6 @@ saml:
   saml_replay_protection_enabled:
     default: false
     hidden: true
+
+  saml_can_connect_existing_user: false
+  saml_can_revoke: false

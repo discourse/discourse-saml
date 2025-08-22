@@ -369,11 +369,11 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   end
 
   def can_connect_existing_user?
-    false
+    setting(:can_connect_existing_user)
   end
 
   def can_revoke?
-    false
+    setting(:can_revoke)
   end
 
   def self.saml_base_url
