@@ -20,6 +20,13 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
       session_expires_at: Time.current + 1.hour,
       sessionindex: {
       },
+      # A minimal "document" field which triggers a SystemStackTooDeep exception when to_json is called
+      document: XMLSecurity::SignedDocument.new(<<~SAML_RESPONSE_DOC),
+            <samlp:Response xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion' 
+                            xmlns:samlp='urn:oasis:names:tc:SAML:2.0:protocol'>
+              <saml:Issuer>test</saml:Issuer>
+            </samlp:Response>
+          SAML_RESPONSE_DOC
     ).tap { |response| allow(response).to receive(:soft=).and_return(response) }
   end
 
@@ -68,5 +75,10 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
         }.not_to raise_error
       end
     end
+  end
+
+  it "removes the extra[:response_object] field from the auth hash" do
+    strategy.send(:handle_response, "raw_response", {}, settings_double) {}
+    expect(strategy.extra[:response_object]).to be(nil)
   end
 end
