@@ -61,3 +61,6 @@ en:
     saml_log_auth: Store raw data about authentications in the `plugin_store_rows` database table.
     saml_debug_auth: Enable debug logging to `/logs`
     saml_base_url: Override the base URL for the Service Provider. Defaults to the forum base URL.
+
+    saml_can_connect_existing_user: Allow users to manually connect their SAML account
+    saml_can_revoke: Allow users to manually revoke their connected SAML account

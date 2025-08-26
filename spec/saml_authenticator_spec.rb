@@ -669,6 +669,17 @@ describe SamlAuthenticator do
         expect(user.groups.find(group.id).present?).to eq(true)
       end
     end
+
+    it "handles extra[:raw_info] being a Hashie array" do
+      hash = auth_hash({ "Email" => "testemail@test.com", "Name" => "test name" })
+
+      # When the OneLogin::RubySaml::Attributes is serialized/deserialized, we get a Hashie::Array back
+      hash = OmniAuth::AuthHash.new(JSON.parse(hash.to_json))
+      expect(hash.extra[:raw_info]).to be_a(Hashie::Array)
+
+      result = authenticator.after_authenticate(hash)
+      expect(result).to be_a(Auth::Result)
+    end
   end
 
   describe ".base_url" do

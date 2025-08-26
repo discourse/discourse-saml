@@ -106,11 +106,18 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     end
   end
 
-  def after_authenticate(auth)
+  def after_authenticate(auth, existing_account: nil)
     info = auth.info
 
     extra_data = auth.extra || {}
+
     attributes = extra_data[:raw_info] || OneLogin::RubySaml::Attributes.new
+
+    # During a reconnect, auth gets converted to json and back and auth.extra[:raw_info] ends up as a
+    # Hashie::Array instead of a OneLogin::RubySaml::Attributes.
+    if !attributes.is_a? OneLogin::RubySaml::Attributes
+      attributes = OneLogin::RubySaml::Attributes.new(attributes.to_h)
+    end
 
     auth[:uid] = attributes.single("uid") || auth[:uid] if setting(:use_attributes_uid)
     uid = auth[:uid]
@@ -362,11 +369,11 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   end
 
   def can_connect_existing_user?
-    false
+    setting(:can_connect_existing_user)
   end
 
   def can_revoke?
-    false
+    setting(:can_revoke)
   end
 
   def self.saml_base_url
