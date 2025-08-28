@@ -96,3 +96,5 @@ saml:
 
   saml_can_connect_existing_user: false
   saml_can_revoke: false
+
+  saml_icon: user

@@ -112,4 +112,7 @@ require_relative "lib/saml_authenticator"
 name = GlobalSetting.try(:saml_title)
 button_title = GlobalSetting.try(:saml_button_title) || GlobalSetting.try(:saml_title)
 
-auth_provider title: button_title, pretty_name: name, authenticator: SamlAuthenticator.new
+auth_provider icon_setting: :saml_icon,
+              title: button_title,
+              pretty_name: name,
+              authenticator: SamlAuthenticator.new
