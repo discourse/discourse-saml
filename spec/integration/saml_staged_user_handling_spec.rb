@@ -22,7 +22,10 @@ describe "SAML staged user handling", type: :request do
 
     expect(response.status).to eq(302)
     expect(response.location).to eq("http://test.localhost/")
-    expect(session[:authentication]).to include(username: staged.username, email: staged.email)
+    expect(server_session[:authentication] || session[:authentication]).to include(
+      username: staged.username,
+      email: staged.email,
+    )
     expect(JSON.parse(cookies[:authentication_data])["username"]).to eq(staged.username)
 
     post "/u.json", params: { name: staged.name, username: staged.username, email: staged.email }
