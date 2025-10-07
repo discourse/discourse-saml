@@ -52,6 +52,9 @@ module ::DiscourseSaml
   end
 end
 
+register_site_setting_area("saml")
+register_admin_config_login_route("saml")
+
 after_initialize do
   if !!GlobalSetting.try("saml_target_url")
     # Configured via environment variables. Hide all the site settings
