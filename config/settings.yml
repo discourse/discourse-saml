@@ -14,7 +14,6 @@ saml:
   saml_name_identifier_format:
     default: ""
     area: "saml"
-
   saml_cert:
     default: ""
     textarea: true
@@ -35,7 +34,6 @@ saml:
     default: ""
     textarea: true
     area: "saml"
-
   saml_request_method:
     type: enum
     default: GET
@@ -170,8 +168,16 @@ saml:
   saml_replay_protection_enabled:
     default: false
     hidden: true
+    area: "saml"
 
-  saml_can_connect_existing_user: false
-  saml_can_revoke: false
+  saml_can_connect_existing_user:
+    default: false
+    area: "saml"
 
-  saml_icon: user
+  saml_can_revoke:
+    default: false
+    area: "saml"
+
+  saml_icon:
+    default: "user"
+    area: "saml"
