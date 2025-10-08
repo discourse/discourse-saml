@@ -1,7 +1,6 @@
 saml:
   saml_enabled:
     default: false
-    client: true
     area: "saml"
 
   saml_target_url:
