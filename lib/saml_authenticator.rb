@@ -124,7 +124,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     previous_attributes =
       UserAssociatedAccount.find_by(provider_name: name, provider_uid: uid)&.extra
 
-    auth.info[:email] ||= uid if uid.to_s&.include?("@")
+    auth.info[:email] ||= uid if uid.to_s.include?("@")
 
     auth.info[:nickname] = uid.to_s if uid && setting(:use_attributes_uid)
 

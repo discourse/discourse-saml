@@ -16,8 +16,8 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
       attributes: {
       },
       settings: settings_double,
-      not_on_or_after: Time.current + 1.hour,
-      session_expires_at: Time.current + 1.hour,
+      not_on_or_after: 1.hour.from_now,
+      session_expires_at: 1.hour.from_now,
       sessionindex: {
       },
       # A minimal "document" field which triggers a SystemStackTooDeep exception when to_json is called
