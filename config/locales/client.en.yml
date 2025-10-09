@@ -9,3 +9,7 @@ en:
       site_settings:
         categories:
           saml: SAML
+      config:
+        login:
+          sub_pages:
+            saml: "SAML"

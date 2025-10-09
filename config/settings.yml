@@ -1,15 +1,25 @@
 saml:
-  saml_enabled: false
+  saml_enabled:
+    default: false
+    area: "saml"
 
-  saml_target_url: ""
-  saml_slo_target_url: ""
+  saml_target_url:
+    default: ""
+    area: "saml"
+  saml_slo_target_url:
+    default: ""
+    area: "saml"
 
-  saml_name_identifier_format: ""
-
+  saml_name_identifier_format:
+    default: ""
+    area: "saml"
   saml_cert:
     default: ""
     textarea: true
-  saml_cert_fingerprint: ""
+    area: "saml"
+  saml_cert_fingerprint:
+    default: ""
+    area: "saml"
   saml_cert_fingerprint_algorithm:
     type: enum
     default: SHA1
@@ -18,83 +28,155 @@ saml:
       - SHA256
       - SHA384
       - SHA512
+    area: "saml"
   saml_cert_multi:
     default: ""
     textarea: true
-
+    area: "saml"
   saml_request_method:
     type: enum
     default: GET
     choices:
       - GET
       - POST
+    area: "saml"
   saml_sp_certificate:
     default: ""
     textarea: true
+    area: "saml"
   saml_sp_private_key:
     default: ""
     textarea: true
-  saml_authn_requests_signed: false
-  saml_want_assertions_signed: false
-  saml_logout_requests_signed: false
-  saml_logout_responses_signed: false
+    area: "saml"
+  saml_authn_requests_signed:
+    default: false
+    area: "saml"
+  saml_want_assertions_signed:
+    default: false
+    area: "saml"
+  saml_logout_requests_signed:
+    default: false
+    area: "saml"
+  saml_logout_responses_signed:
+    default: false
+    area: "saml"
 
   saml_request_attributes:
     type: list
     default: ""
+    area: "saml"
   saml_attribute_statements:
     type: list
     default: ""
-  saml_use_attributes_uid: false
+    area: "saml"
+  saml_use_attributes_uid:
+    default: false
+    area: "saml"
 
-  saml_skip_email_validation: false
+  saml_skip_email_validation:
+    default: false
+    area: "saml"
   saml_validate_email_fields:
     type: list
     default: ""
-  saml_default_emails_valid: true
+    area: "saml"
+  saml_default_emails_valid:
+    default: true
+    area: "saml"
 
-  saml_clear_username: false
-  saml_omit_username: false
-  saml_auto_create_account: false
+  saml_clear_username:
+    default: false
+    area: "saml"
+  saml_omit_username:
+    default: false
+    area: "saml"
+  saml_auto_create_account:
+    default: false
+    area: "saml"
 
-  saml_sync_groups: false
-  saml_groups_fullsync: false
+  saml_sync_groups:
+    default: false
+    area: "saml"
+  saml_groups_fullsync:
+    default: false
+    area: "saml"
   saml_groups_attribute:
     type: list
     default: "memberOf"
-  saml_groups_use_full_name: false
-  saml_groups_ldap_leafcn: false
+    area: "saml"
+  saml_groups_use_full_name:
+    default: false
+    area: "saml"
+  saml_groups_ldap_leafcn:
+    default: false
+    area: "saml"
+
   saml_sync_groups_list:
     type: list
     default: ""
+    area: "saml"
 
   saml_user_field_statements:
     type: list
     default: ""
+    area: "saml"
 
-  saml_sync_email: false
+  saml_sync_email:
+    default: false
+    area: "saml"
 
-  saml_sync_moderator: false
-  saml_moderator_attribute: "isModerator"
-  saml_sync_admin: false
-  saml_admin_attribute: "isAdmin"
-  saml_sync_trust_level: false
-  saml_trust_level_attribute: "trustLevel"
-  saml_sync_locale: false
-  saml_locale_attribute: "locale"
+  saml_sync_moderator:
+    default: false
+    area: "saml"
+  saml_moderator_attribute:
+    default: "isModerator"
+    area: "saml"
+  saml_sync_admin:
+    default: false
+    area: "saml"
+  saml_admin_attribute:
+    default: "isAdmin"
+    area: "saml"
+  saml_sync_trust_level:
+    default: false
+    area: "saml"
+  saml_trust_level_attribute:
+    default: "trustLevel"
+    area: "saml"
+  saml_sync_locale:
+    default: false
+    area: "saml"
+  saml_locale_attribute:
+    default: "locale"
+    area: "saml"
 
   saml_forced_domains:
     type: list
     default: ""
+    area: "saml"
 
-  saml_log_auth: false
-  saml_debug_auth: false
-  saml_base_url: ""
+  saml_log_auth:
+    default: false
+    area: "saml"
+  saml_debug_auth:
+    default: false
+    area: "saml"
+  saml_base_url:
+    default: ""
+    area: "saml"
   saml_replay_protection_enabled:
     default: false
     hidden: true
+    area: "saml"
 
-  saml_can_connect_existing_user: false
-  saml_can_revoke: false
+  saml_can_connect_existing_user:
+    default: false
+    area: "saml"
 
-  saml_icon: user
+  saml_can_revoke:
+    default: false
+    area: "saml"
+
+  saml_icon:
+    default: "user"
+    area: "saml"
