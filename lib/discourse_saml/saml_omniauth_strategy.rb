@@ -42,6 +42,17 @@ class ::DiscourseSaml::SamlOmniauthStrategy < OmniAuth::Strategies::SAML
     super.except(:response_object)
   end
 
+  # Override parent's find_attribute_by to skip blank values
+  # This prevents empty SAML attributes from overriding valid ones when
+  # attribute_statements maps multiple SAML attributes to the same field
+  def find_attribute_by(keys)
+    keys.each do |key|
+      value = @attributes[key]
+      return value if value.present?
+    end
+    nil
+  end
+
   protected
 
   def handle_response(raw_response, opts, settings)

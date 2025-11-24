@@ -17,34 +17,29 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     ::DiscourseSaml.setting(key, prefer_prefix: "#{name}_")
   end
 
+  DEFAULT_ATTRIBUTES = {
+    "name" => ["fullName", "name"],
+    "email" => ["email", "mail"],
+    "first_name" => ["first_name", "firstname", "firstName"],
+    "last_name" => ["last_name", "lastname", "lastName"],
+    "nickname" => ["screenName"],
+  }
+
   def request_attributes
-    attrs = "email|name|first_name|last_name"
-    custom_attrs = setting(:request_attributes)
-
-    attrs = "#{attrs}|#{custom_attrs}" if custom_attrs.present?
-
-    attrs
-      .split("|")
-      .uniq
-      .map { |name| { name: name, name_format: attribute_name_format, friendly_name: name } }
+    attrs = DEFAULT_ATTRIBUTES.keys | setting(:request_attributes).split("|").compact_blank.map(&:strip)
+    attrs.map { |name| { name: , name_format: attribute_name_format, friendly_name: name } }
   end
 
   def attribute_statements
-    result = {}
-    statements =
-      "name:fullName,name|email:email,mail|first_name:first_name,firstname,firstName|last_name:last_name,lastname,lastName|nickname:screenName"
-    custom_statements = setting(:attribute_statements)
+    result = Hash.new { |h, k| h[k] = [] }
 
-    statements = "#{statements}|#{custom_statements}" if custom_statements.present?
+    setting(:attribute_statements).split("|").each do |statement|
+      attrs = statement.split(":")
+      next if attrs.size != 2 || attrs[0].blank? || attrs[1].blank?
+      result[attrs[0].strip] |= attrs[1].split(",").compact_blank.map(&:strip)
+    end
 
-    statements
-      .split("|")
-      .map do |statement|
-        attrs = statement.split(":", 2)
-        next if attrs.count != 2
-        (result[attrs[0]] ||= []) << attrs[1].split(",")
-        result[attrs[0]].flatten!
-      end
+    DEFAULT_ATTRIBUTES.each { |key, defaults| result[key] |= defaults }
 
     result
   end

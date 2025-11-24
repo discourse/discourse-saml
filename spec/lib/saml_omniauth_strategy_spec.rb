@@ -22,7 +22,7 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
       },
       # A minimal "document" field which triggers a SystemStackTooDeep exception when to_json is called
       document: XMLSecurity::SignedDocument.new(<<~SAML_RESPONSE_DOC),
-            <samlp:Response xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion' 
+            <samlp:Response xmlns:saml='urn:oasis:names:tc:SAML:2.0:assertion'
                             xmlns:samlp='urn:oasis:names:tc:SAML:2.0:protocol'>
               <saml:Issuer>test</saml:Issuer>
             </samlp:Response>
@@ -80,5 +80,47 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
   it "removes the extra[:response_object] field from the auth hash" do
     strategy.send(:handle_response, "raw_response", {}, settings_double) {}
     expect(strategy.extra[:response_object]).to be(nil)
+  end
+
+  describe "#find_attribute_by" do
+    let(:strategy) { described_class.new(->(env) { [200, env, "app"] }) }
+
+    before do
+      strategy.instance_variable_set(
+        :@attributes,
+        OneLogin::RubySaml::Attributes.new(
+          {
+            "username" => ["johndoe"],
+            "screenName" => [""],
+            "email" => ["user@example.com"],
+          },
+        ),
+      )
+    end
+
+    it "returns first non-blank value when checking multiple attributes" do
+      result = strategy.find_attribute_by(%w[screenName username])
+      expect(result).to eq("johndoe")
+    end
+
+    it "skips empty string and returns valid value" do
+      result = strategy.find_attribute_by(%w[screenName email])
+      expect(result).to eq("user@example.com")
+    end
+
+    it "returns nil when all attributes are blank" do
+      result = strategy.find_attribute_by(%w[screenName])
+      expect(result).to be_nil
+    end
+
+    it "returns nil when no attributes match" do
+      result = strategy.find_attribute_by(%w[nonexistent])
+      expect(result).to be_nil
+    end
+
+    it "returns first value when first attribute has non-blank value" do
+      result = strategy.find_attribute_by(%w[username screenName])
+      expect(result).to eq("johndoe")
+    end
   end
 end

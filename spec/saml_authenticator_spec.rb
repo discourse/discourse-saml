@@ -629,10 +629,9 @@ describe SamlAuthenticator do
 
     describe "global setting" do
       it "matches request_attributes count" do
-        expect(authenticator.request_attributes.count).to eq(4)
-
+        expect(authenticator.request_attributes.count).to eq(5)
         SiteSetting.saml_request_attributes = "company_name|mobile_number|name"
-        expect(authenticator.request_attributes.count).to eq(6)
+        expect(authenticator.request_attributes.count).to eq(7)
       end
 
       it "matches attribute_statements count" do
@@ -640,7 +639,7 @@ describe SamlAuthenticator do
 
         SiteSetting.saml_attribute_statements = "email:emailAddress|company|name"
         expect(authenticator.attribute_statements.count).to eq(5)
-        expect(authenticator.attribute_statements["email"]).to eq(%w[email mail emailAddress])
+        expect(authenticator.attribute_statements["email"]).to eq(%w[emailAddress email mail])
 
         SiteSetting.saml_attribute_statements =
           "company_name:company,business|phone:mobile,contact_no"
