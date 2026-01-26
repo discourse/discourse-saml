@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe "SAML POST-mode functionality", type: :request do
   before do
     SiteSetting.saml_enabled = true

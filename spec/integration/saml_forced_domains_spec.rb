@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe "SAML Forced Domains" do
   let(:password) { "abcdefghijklmnop" }
   let(:saml_user) do

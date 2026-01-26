@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe "SAML Single Log Out" do
   let(:user) { Fabricate(:user) }
   before { SiteSetting.saml_enabled = true }
