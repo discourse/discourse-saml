@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-require "rails_helper"
 
 describe "SAML staged user handling", type: :request do
   let(:staged) { Fabricate(:staged) }

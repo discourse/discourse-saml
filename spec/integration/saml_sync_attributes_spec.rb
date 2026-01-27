@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe "SAML Overrides Email", type: :request do
   fab!(:initial_email) { "initial@example.com" }
   fab!(:initial_username) { "initialusername" }

@@ -89,11 +89,7 @@ describe ::DiscourseSaml::SamlOmniauthStrategy do
       strategy.instance_variable_set(
         :@attributes,
         OneLogin::RubySaml::Attributes.new(
-          {
-            "username" => ["johndoe"],
-            "screenName" => [""],
-            "email" => ["user@example.com"],
-          },
+          { "username" => ["johndoe"], "screenName" => [""], "email" => ["user@example.com"] },
         ),
       )
     end
