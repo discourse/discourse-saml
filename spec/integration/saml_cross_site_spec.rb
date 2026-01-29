@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe "SAML cross-site with same-site cookie", type: :request do
   let(:saml_response) do
     Base64.strict_encode64("<Response xmlns='urn:oasis:names:tc:SAML:2.0:protocol'/>")

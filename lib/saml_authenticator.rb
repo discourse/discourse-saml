@@ -18,26 +18,29 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
   end
 
   DEFAULT_ATTRIBUTES = {
-    "name" => ["fullName", "name"],
-    "email" => ["email", "mail"],
-    "first_name" => ["first_name", "firstname", "firstName"],
-    "last_name" => ["last_name", "lastname", "lastName"],
+    "name" => %w[fullName name],
+    "email" => %w[email mail],
+    "first_name" => %w[first_name firstname firstName],
+    "last_name" => %w[last_name lastname lastName],
     "nickname" => ["screenName"],
   }
 
   def request_attributes
-    attrs = DEFAULT_ATTRIBUTES.keys | setting(:request_attributes).split("|").compact_blank.map(&:strip)
-    attrs.map { |name| { name: , name_format: attribute_name_format, friendly_name: name } }
+    attrs =
+      DEFAULT_ATTRIBUTES.keys | setting(:request_attributes).split("|").compact_blank.map(&:strip)
+    attrs.map { |name| { name:, name_format: attribute_name_format, friendly_name: name } }
   end
 
   def attribute_statements
     result = Hash.new { |h, k| h[k] = [] }
 
-    setting(:attribute_statements).split("|").each do |statement|
-      attrs = statement.split(":")
-      next if attrs.size != 2 || attrs[0].blank? || attrs[1].blank?
-      result[attrs[0].strip] |= attrs[1].split(",").compact_blank.map(&:strip)
-    end
+    setting(:attribute_statements)
+      .split("|")
+      .each do |statement|
+        attrs = statement.split(":")
+        next if attrs.size != 2 || attrs[0].blank? || attrs[1].blank?
+        result[attrs[0].strip] |= attrs[1].split(",").compact_blank.map(&:strip)
+      end
 
     DEFAULT_ATTRIBUTES.each { |key, defaults| result[key] |= defaults }
 

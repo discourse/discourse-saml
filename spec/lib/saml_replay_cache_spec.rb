@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "rails_helper"
-
 describe ::DiscourseSaml::SamlReplayCache do
   let(:redis) { Discourse.redis }
   let(:now) { Time.utc(2024, 11, 16, 7, 25, 0) }
