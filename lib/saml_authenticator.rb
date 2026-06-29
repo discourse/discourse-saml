@@ -37,7 +37,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     setting(:attribute_statements)
       .split("|")
       .each do |statement|
-        attrs = statement.split(":")
+        attrs = statement.split(":", 2)
         next if attrs.size != 2 || attrs[0].blank? || attrs[1].blank?
         result[attrs[0].strip] |= attrs[1].split(",").compact_blank.map(&:strip)
       end
@@ -296,7 +296,7 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     statements
       .split("|")
       .each do |statement|
-        key, field_id = statement.split(":")
+        key, _, field_id = statement.rpartition(":")
         next if key.blank? || field_id.blank?
 
         val = info[key] || attributes.multi(key)&.join(",")

@@ -119,6 +119,16 @@ describe SamlAuthenticator do
         end
     end
 
+    it "syncs user fields when the attribute name is a URL (e.g. Entra ID claims)" do
+      claim = "http://schemas.microsoft.com/identity/claims/displayname"
+      SiteSetting.saml_user_field_statements = "#{claim}:2"
+
+      hash = auth_hash(claim => ["Jane Doe"])
+
+      result = authenticator.after_authenticate(hash)
+      expect(result.user.custom_fields["user_field_2"]).to eq("Jane Doe")
+    end
+
     it "syncs user locale" do
       SiteSetting.saml_sync_locale = true
       user_locale = "fr"
@@ -644,6 +654,18 @@ describe SamlAuthenticator do
         SiteSetting.saml_attribute_statements =
           "company_name:company,business|phone:mobile,contact_no"
         expect(authenticator.attribute_statements.count).to eq(7)
+      end
+
+      it "parses URL-based attribute names (e.g. Entra ID claims)" do
+        SiteSetting.saml_attribute_statements =
+          "name:http://schemas.microsoft.com/identity/claims/displayname|first_name:http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname"
+
+        expect(authenticator.attribute_statements["name"]).to include(
+          "http://schemas.microsoft.com/identity/claims/displayname",
+        )
+        expect(authenticator.attribute_statements["first_name"]).to include(
+          "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+        )
       end
     end
 
