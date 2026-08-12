@@ -86,6 +86,8 @@ describe "SAML Forced Domains" do
     end
 
     before do
+      SiteSetting.google_oauth2_client_id = "google_oauth2_client_id"
+      SiteSetting.google_oauth2_client_secret = "google_oauth2_client_secret"
       SiteSetting.enable_google_oauth2_logins = true
       OmniAuth.config.mock_auth[:google_oauth2] = mock_auth
       OmniAuth.config.mock_auth[:saml] = mock_auth
