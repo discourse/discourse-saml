@@ -7,7 +7,9 @@ describe "SAML cross-site with same-site cookie", type: :request do
 
   before do
     OmniAuth.config.test_mode = false
-    global_setting :saml_target_url, "https://example.com/samlidp"
+    SiteSetting.saml_target_url = "https://example.com/samlidp"
+    SiteSetting.saml_cert_fingerprint = "fingerprint"
+    SiteSetting.saml_enabled = true
   end
 
   it "serves an auto-submitting POST form" do

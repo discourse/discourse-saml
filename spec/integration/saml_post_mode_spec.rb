@@ -2,9 +2,10 @@
 
 describe "SAML POST-mode functionality", type: :request do
   before do
+    SiteSetting.saml_target_url = "https://example.com/samlidp"
+    SiteSetting.saml_cert_fingerprint = "fingerprint"
     SiteSetting.saml_enabled = true
     OmniAuth.config.test_mode = false
-    SiteSetting.saml_target_url = "https://example.com/samlidp"
   end
 
   it "does not affect functionality when disabled" do

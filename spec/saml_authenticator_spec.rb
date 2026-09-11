@@ -6,6 +6,69 @@ describe SamlAuthenticator do
 
   fab!(:user)
 
+  describe "#enabled?" do
+    before do
+      SiteSetting.saml_target_url = "https://idp.example.com/login"
+      SiteSetting.saml_cert = "certificate"
+    end
+
+    it "requires the login toggle" do
+      expect(authenticator.enabled?).to eq(false)
+
+      SiteSetting.saml_enabled = true
+      expect(authenticator.enabled?).to eq(true)
+    end
+
+    %i[saml_target_url saml_cert].each do |setting|
+      it "disables login when #{setting} is cleared" do
+        SiteSetting.saml_enabled = true
+        SiteSetting.public_send("#{setting}=", "")
+
+        expect(authenticator.enabled?).to eq(false)
+        expect(DiscourseSaml.enabled?).to eq(false)
+      end
+
+      it "rejects enabling login without #{setting}" do
+        SiteSetting.public_send("#{setting}=", "")
+
+        expect { SiteSetting.saml_enabled = true }.to raise_error(Discourse::InvalidParameters)
+      end
+    end
+
+    %i[saml_cert_fingerprint saml_cert_multi].each do |setting|
+      it "accepts #{setting} instead of a single certificate" do
+        SiteSetting.saml_cert = ""
+        SiteSetting.public_send("#{setting}=", "certificate")
+        SiteSetting.saml_enabled = true
+
+        expect(authenticator.enabled?).to eq(true)
+
+        SiteSetting.public_send("#{setting}=", "")
+        expect(authenticator.enabled?).to eq(false)
+      end
+    end
+
+    it "preserves legacy global enablement while requiring credentials" do
+      GlobalSetting.stubs(:saml_target_url).returns("https://idp.example.com/login")
+      expect(authenticator.enabled?).to eq(true)
+
+      SiteSetting.saml_cert = ""
+      expect(authenticator.enabled?).to eq(false)
+    end
+
+    it "uses subclass settings with the existing SAML fallbacks" do
+      authenticator.stubs(:name).returns("custom")
+      GlobalSetting.stubs(:custom_target_url).returns("https://custom.example.com/login")
+      GlobalSetting.stubs(:custom_cert_fingerprint).returns("fingerprint")
+      SiteSetting.saml_target_url = ""
+      SiteSetting.saml_cert = ""
+      expect(authenticator.enabled?).to eq(true)
+
+      GlobalSetting.stubs(:custom_cert_fingerprint).returns(nil)
+      expect(authenticator.enabled?).to eq(false)
+    end
+  end
+
   describe "after_authenticate" do
     def auth_hash(attributes)
       OmniAuth::AuthHash.new(

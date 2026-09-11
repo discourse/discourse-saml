@@ -4,6 +4,8 @@ describe "SAML staged user handling", type: :request do
   let(:staged) { Fabricate(:staged) }
 
   before do
+    SiteSetting.saml_target_url = "https://idp.example.com/login"
+    SiteSetting.saml_cert_fingerprint = "fingerprint"
     SiteSetting.saml_enabled = true
     OmniAuth.config.test_mode = true
     OmniAuth.config.mock_auth[:saml] = OmniAuth::AuthHash.new(

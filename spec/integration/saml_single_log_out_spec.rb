@@ -2,7 +2,11 @@
 
 describe "SAML Single Log Out" do
   let(:user) { Fabricate(:user) }
-  before { SiteSetting.saml_enabled = true }
+  before do
+    SiteSetting.saml_target_url = "https://idp.example.com/login"
+    SiteSetting.saml_cert_fingerprint = "fingerprint"
+    SiteSetting.saml_enabled = true
+  end
 
   it "does nothing when SLO is not configured" do
     sign_in(user)

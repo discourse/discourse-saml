@@ -11,6 +11,8 @@ describe "SAML Overrides Email", type: :request do
   end
 
   before do
+    SiteSetting.saml_target_url = "https://idp.example.com/login"
+    SiteSetting.saml_cert_fingerprint = "fingerprint"
     SiteSetting.saml_enabled = true
 
     OmniAuth.config.test_mode = true
