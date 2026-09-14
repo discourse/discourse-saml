@@ -360,10 +360,24 @@ class SamlAuthenticator < ::Auth::ManagedAuthenticator
     end
   end
 
+  def enable_setting
+    :saml_enabled
+  end
+
+  def required_settings
+    settings = %i[saml_target_url]
+    settings << :saml_cert if %i[cert cert_fingerprint cert_multi].none? { setting(it).present? }
+    settings
+  end
+
+  def missing_settings
+    required_settings.select { setting(it.to_s.delete_prefix("saml_")).blank? }
+  end
+
   def enabled?
     # Checking target_url global setting for backwards compatibility
     # (the plugin used to be enabled-by-default)
-    setting(:enabled) || !!GlobalSetting.try("#{name}_target_url")
+    (setting(:enabled) || GlobalSetting.try("#{name}_target_url").present?) && configured?
   end
 
   def can_connect_existing_user?

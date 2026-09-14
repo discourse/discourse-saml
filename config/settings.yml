@@ -1,6 +1,7 @@
 saml:
   saml_enabled:
     default: false
+    validator: AuthProviderCredentialsValidator
     area: "saml"
 
   saml_target_url:

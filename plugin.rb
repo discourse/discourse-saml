@@ -25,9 +25,7 @@ end
 
 module ::DiscourseSaml
   def self.enabled?
-    # Legacy - we only check the enabled site setting
-    # if the environment-variables are **not** present
-    !!GlobalSetting.try("saml_target_url") || SiteSetting.saml_enabled
+    SamlAuthenticator.new.enabled?
   end
 
   def self.setting(key, prefer_prefix: "saml_")

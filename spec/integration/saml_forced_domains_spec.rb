@@ -10,9 +10,10 @@ describe "SAML Forced Domains" do
   end
 
   before do
+    SiteSetting.saml_target_url = "https://example.com/samltarget"
+    SiteSetting.saml_cert_fingerprint = "fingerprint"
     SiteSetting.saml_enabled = true
     OmniAuth.config.test_mode = true
-    SiteSetting.saml_target_url = "https://example.com/samltarget"
   end
 
   describe "username/password login" do
